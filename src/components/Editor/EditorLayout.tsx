@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react';
 import { ReactFlowProvider } from 'reactflow';
-import { useEditorStore } from '@stores/editorStore';
+import { useEditorStore } from '../../stores/editorStore';
 import { Toolbar } from './Toolbar';
 import { Sidebar } from './Sidebar';
 import { ParagraphEditor } from './ParagraphEditor';
 import { FlowEditor } from '../Flow/FlowEditor';
 import { Preview } from './Preview';
+import { AssetManager } from '../Assets';
 
 export const EditorLayout: React.FC = () => {
-  const { mode, currentProject, createNewProject } = useEditorStore();
+  const { mode, currentProject, createNewProject, addAsset, deleteAsset } = useEditorStore();
   
   console.log('=================== EditorLayout Render ===================');
   console.log('EditorLayout - Current mode:', mode);
@@ -81,6 +82,18 @@ export const EditorLayout: React.FC = () => {
           <div style={{ position: 'relative' }}>
             {debugOverlay}
             <Preview />
+          </div>
+        );
+      case 'assets':
+        return (
+          <div className="h-full">
+            <AssetManager
+              assets={currentProject?.assets || []}
+              onAssetUpload={addAsset}
+              onAssetDelete={deleteAsset}
+              mode="manage"
+              className="h-full"
+            />
           </div>
         );
       default:

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { EditorState, NovelProject, Paragraph } from '@/types';
-import { createEmptyProject, createEmptyParagraph } from '@utils/index';
+import { EditorState, NovelProject, Paragraph, Asset } from '../types';
+import { createEmptyProject, createEmptyParagraph } from '../utils';
 
 interface EditorStore extends EditorState {
   // Actions
@@ -16,8 +16,15 @@ interface EditorStore extends EditorState {
   deleteParagraph: (id: string) => void;
   selectParagraph: (id: string | null) => void;
   
+  // Asset actions
+  addAsset: (asset: Asset) => void;
+  updateAsset: (id: string, updates: Partial<Asset>) => void;
+  deleteAsset: (id: string) => void;
+  getAssetsByCategory: (category: Asset['category']) => Asset[];
+  getAssetsByType: (type: Asset['type']) => Asset[];
+  
   // Mode actions
-  setMode: (mode: 'editor' | 'flow' | 'preview') => void;
+  setMode: (mode: 'editor' | 'flow' | 'preview' | 'assets') => void;
   
   // Utility actions
   markAsModified: () => void;
@@ -173,8 +180,101 @@ export const useEditorStore = create<EditorStore>()(
           set({ selectedParagraphId: id });
         },
 
+        // Asset actions
+        addAsset: (asset: Asset) => {
+          const { currentProject } = get();
+          if (!currentProject) return;
+
+          const updatedAssets = [...currentProject.assets, asset];
+          
+          set({
+            currentProject: {
+              ...currentProject,
+              assets: updatedAssets,
+              metadata: {
+                ...currentProject.metadata,
+                modified: new Date(),
+              },
+            },
+            isModified: true,
+          });
+        },
+
+        updateAsset: (id: string, updates: Partial<Asset>) => {
+          const { currentProject } = get();
+          if (!currentProject) return;
+
+          const updatedAssets = currentProject.assets.map(asset =>
+            asset.id === id
+              ? {
+                  ...asset,
+                  ...updates,
+                  metadata: {
+                    ...asset.metadata,
+                    ...updates.metadata,
+                  },
+                }
+              : asset
+          );
+
+          set({
+            currentProject: {
+              ...currentProject,
+              assets: updatedAssets,
+              metadata: {
+                ...currentProject.metadata,
+                modified: new Date(),
+              },
+            },
+            isModified: true,
+          });
+        },
+
+        deleteAsset: (id: string) => {
+          const { currentProject } = get();
+          if (!currentProject) return;
+
+          const updatedAssets = currentProject.assets.filter(asset => asset.id !== id);
+
+          // アセットを使用しているパラグラフからも削除
+          const updatedParagraphs = currentProject.paragraphs.map(paragraph => ({
+            ...paragraph,
+            content: {
+              ...paragraph.content,
+              background: paragraph.content.background?.id === id ? undefined : paragraph.content.background,
+              bgm: paragraph.content.bgm?.id === id ? undefined : paragraph.content.bgm,
+              characters: paragraph.content.characters?.filter(char => char.sprite.id !== id) || [],
+            },
+          }));
+
+          set({
+            currentProject: {
+              ...currentProject,
+              assets: updatedAssets,
+              paragraphs: updatedParagraphs,
+              metadata: {
+                ...currentProject.metadata,
+                modified: new Date(),
+              },
+            },
+            isModified: true,
+          });
+        },
+
+        getAssetsByCategory: (category: Asset['category']) => {
+          const { currentProject } = get();
+          if (!currentProject) return [];
+          return currentProject.assets.filter(asset => asset.category === category);
+        },
+
+        getAssetsByType: (type: Asset['type']) => {
+          const { currentProject } = get();
+          if (!currentProject) return [];
+          return currentProject.assets.filter(asset => asset.type === type);
+        },
+
         // Mode actions
-        setMode: (mode: 'editor' | 'flow' | 'preview') => {
+        setMode: (mode: 'editor' | 'flow' | 'preview' | 'assets') => {
           set({ mode });
         },
 

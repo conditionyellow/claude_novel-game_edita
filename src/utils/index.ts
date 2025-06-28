@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { Paragraph, Choice, NovelProject } from '@/types';
+import { Paragraph, Choice, NovelProject } from '../types';
 
 export const generateId = (): string => nanoid();
 

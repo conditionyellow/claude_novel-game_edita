@@ -1,0 +1,211 @@
+import React, { useState } from 'react';
+import { Plus, Folder, Image as ImageIcon, Volume2 } from 'lucide-react';
+import { Asset, AssetUploadOptions } from '../../types';
+import { Button } from '../UI';
+import { AssetUploader } from './AssetUploader';
+import { AssetLibrary } from './AssetLibrary';
+
+interface AssetManagerProps {
+  assets: Asset[];
+  onAssetUpload: (asset: Asset) => void;
+  onAssetDelete: (assetId: string) => void;
+  onAssetSelect?: (asset: Asset) => void;
+  className?: string;
+  mode?: 'select' | 'manage';
+}
+
+export const AssetManager: React.FC<AssetManagerProps> = ({
+  assets,
+  onAssetUpload,
+  onAssetDelete,
+  onAssetSelect,
+  className = '',
+  mode = 'manage'
+}) => {
+  const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library');
+  const [uploadCategory, setUploadCategory] = useState<Asset['category']>('background');
+
+  const handleUpload = (asset: Asset) => {
+    onAssetUpload(asset);
+    setActiveTab('library'); // アップロード後はライブラリ表示に戻る
+  };
+
+  const handleValidationError = (errors: string[]) => {
+    console.error('Asset validation errors:', errors);
+    // 将来的にトースト通知などを実装
+  };
+
+  const getAssetCounts = () => {
+    const counts = {
+      total: assets.length,
+      images: assets.filter(a => a.type === 'image').length,
+      audio: assets.filter(a => a.type === 'audio').length,
+      categories: {
+        background: assets.filter(a => a.category === 'background').length,
+        character: assets.filter(a => a.category === 'character').length,
+        bgm: assets.filter(a => a.category === 'bgm').length,
+        se: assets.filter(a => a.category === 'se').length,
+        other: assets.filter(a => a.category === 'other').length,
+      }
+    };
+    return counts;
+  };
+
+  const counts = getAssetCounts();
+
+  const uploadOptions: AssetUploadOptions = {
+    category: uploadCategory,
+    maxSize: uploadCategory === 'bgm' ? 50 * 1024 * 1024 : 10 * 1024 * 1024, // BGMは50MB、その他は10MB
+    allowedFormats: uploadCategory === 'background' || uploadCategory === 'character'
+      ? ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+      : ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4'],
+    autoOptimize: true
+  };
+
+  return (
+    <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+      {/* ヘッダー */}
+      <div className="border-b border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {mode === 'select' ? 'アセットを選択' : 'アセット管理'}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              プロジェクトで使用する画像・音声ファイルの管理
+            </p>
+          </div>
+          
+          {mode === 'manage' && (
+            <Button
+              onClick={() => setActiveTab('upload')}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              アセット追加
+            </Button>
+          )}
+        </div>
+
+        {/* 統計情報 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-gray-50 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Folder className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-600">総数</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{counts.total}</p>
+          </div>
+          
+          <div className="bg-blue-50 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-600">画像</span>
+            </div>
+            <p className="text-2xl font-bold text-blue-900">{counts.images}</p>
+          </div>
+          
+          <div className="bg-purple-50 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-purple-600" />
+              <span className="text-sm font-medium text-purple-600">音声</span>
+            </div>
+            <p className="text-2xl font-bold text-purple-900">{counts.audio}</p>
+          </div>
+          
+          <div className="bg-green-50 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-green-600" />
+              <span className="text-sm font-medium text-green-600">背景</span>
+            </div>
+            <p className="text-2xl font-bold text-green-900">{counts.categories.background}</p>
+          </div>
+        </div>
+
+        {/* タブナビゲーション */}
+        {mode === 'manage' && (
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={() => setActiveTab('library')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'library'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              ライブラリ
+            </button>
+            <button
+              onClick={() => setActiveTab('upload')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'upload'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              アップロード
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* コンテンツエリア */}
+      <div className="p-6">
+        {activeTab === 'library' || mode === 'select' ? (
+          <AssetLibrary
+            assets={assets}
+            onAssetSelect={onAssetSelect}
+            onAssetDelete={mode === 'manage' ? onAssetDelete : undefined}
+            mode={mode}
+          />
+        ) : (
+          <div className="space-y-6">
+            {/* カテゴリ選択 */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-medium text-gray-900">アップロードするアセットの種類</h3>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { key: 'background', label: '背景画像', icon: ImageIcon, description: 'シーンの背景' },
+                  { key: 'character', label: 'キャラクター', icon: ImageIcon, description: 'キャラクター画像' },
+                  { key: 'bgm', label: 'BGM', icon: Volume2, description: 'バックグラウンド音楽' },
+                  { key: 'se', label: '効果音', icon: Volume2, description: '効果音・SE' },
+                  { key: 'other', label: 'その他', icon: Folder, description: 'その他のファイル' }
+                ].map((category) => {
+                  const Icon = category.icon;
+                  return (
+                    <button
+                      key={category.key}
+                      onClick={() => setUploadCategory(category.key as Asset['category'])}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        uploadCategory === category.key
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className={`w-6 h-6 mx-auto mb-2 ${
+                        uploadCategory === category.key ? 'text-blue-600' : 'text-gray-400'
+                      }`} />
+                      <p className={`font-medium text-sm ${
+                        uploadCategory === category.key ? 'text-blue-900' : 'text-gray-700'
+                      }`}>
+                        {category.label}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">{category.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* アップローダー */}
+            <AssetUploader
+              options={uploadOptions}
+              onUpload={handleUpload}
+              onValidationError={handleValidationError}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

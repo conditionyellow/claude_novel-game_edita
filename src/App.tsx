@@ -1,4 +1,4 @@
-import { EditorLayout } from '@components/Editor/EditorLayout';
+import { EditorLayout } from './components/Editor/EditorLayout';
 
 function App() {
   return (

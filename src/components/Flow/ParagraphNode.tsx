@@ -1,7 +1,7 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Paragraph } from '@/types';
-import { clsx } from '@utils/index';
+import { Paragraph } from '../../types';
+import { clsx } from '../../utils';
 import { Edit, Trash2, Play } from 'lucide-react';
 
 interface ParagraphNodeData {

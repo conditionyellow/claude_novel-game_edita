@@ -1,9 +1,9 @@
 import React from 'react';
-import { useEditorStore } from '@stores/editorStore';
-import { Input, Textarea, Button } from '@components/UI';
+import { useEditorStore } from '../../stores/editorStore';
+import { Input, Textarea, Button } from '../UI';
 import { ChoiceEditor } from './ChoiceEditor';
 import { Plus } from 'lucide-react';
-import { generateId } from '@utils/index';
+import { generateId } from '../../utils';
 
 export const ParagraphEditor: React.FC = () => {
   const { 

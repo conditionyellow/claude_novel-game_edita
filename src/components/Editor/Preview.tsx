@@ -1,5 +1,5 @@
 import React from 'react';
-import { useEditorStore } from '@stores/editorStore';
+import { useEditorStore } from '../../stores/editorStore';
 
 export const Preview: React.FC = () => {
   const { currentProject } = useEditorStore();

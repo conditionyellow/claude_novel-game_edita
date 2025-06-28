@@ -1,6 +1,6 @@
 import React from 'react';
-import { Choice, Paragraph } from '@/types';
-import { Input, Button } from '@components/UI';
+import { Choice, Paragraph } from '../../types';
+import { Input, Button } from '../UI';
 import { Trash2, Plus } from 'lucide-react';
 
 interface ChoiceEditorProps {

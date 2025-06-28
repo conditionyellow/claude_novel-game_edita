@@ -1,7 +1,7 @@
 import React from 'react';
-import { useEditorStore } from '@stores/editorStore';
-import { Button } from '@components/UI';
-import { FileText, GitBranch, Eye, Save, FolderOpen, Plus } from 'lucide-react';
+import { useEditorStore } from '../../stores/editorStore';
+import { Button } from '../UI';
+import { FileText, GitBranch, Eye, Save, FolderOpen, Plus, Image } from 'lucide-react';
 
 export const Toolbar: React.FC = () => {
   const { 
@@ -13,7 +13,7 @@ export const Toolbar: React.FC = () => {
     addParagraph 
   } = useEditorStore();
 
-  const handleModeChange = (newMode: 'editor' | 'flow' | 'preview') => {
+  const handleModeChange = (newMode: 'editor' | 'flow' | 'preview' | 'assets') => {
     setMode(newMode);
   };
 
@@ -67,6 +67,14 @@ export const Toolbar: React.FC = () => {
         >
           <Eye className="w-4 h-4 mr-1" />
           プレビュー
+        </Button>
+        <Button
+          variant={mode === 'assets' ? 'primary' : 'ghost'}
+          size="sm"
+          onClick={() => handleModeChange('assets')}
+        >
+          <Image className="w-4 h-4 mr-1" />
+          アセット
         </Button>
       </div>
 

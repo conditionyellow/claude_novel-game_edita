@@ -3,10 +3,14 @@ export interface Asset {
   name: string;
   url: string;
   type: 'image' | 'audio';
+  category: 'background' | 'character' | 'bgm' | 'se' | 'other';
   metadata: {
     size: number;
     format: string;
     duration?: number;
+    dimensions?: { width: number; height: number };
+    uploadedAt: Date;
+    lastUsed?: Date;
   };
 }
 
@@ -87,7 +91,7 @@ export interface NovelProject {
 export interface EditorState {
   currentProject: NovelProject | null;
   selectedParagraphId: string | null;
-  mode: 'editor' | 'flow' | 'preview';
+  mode: 'editor' | 'flow' | 'preview' | 'assets';
   isModified: boolean;
 }
 
@@ -107,4 +111,36 @@ export interface ChoiceEdgeData {
 
 export interface FlowState {
   selectedNodeId: string | null;
+}
+
+// アセット管理用の型定義
+export interface AssetUploadOptions {
+  category: Asset['category'];
+  maxSize?: number;
+  allowedFormats?: string[];
+  autoOptimize?: boolean;
+}
+
+export interface AssetValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  optimizedSize?: number;
+}
+
+export interface AssetLibraryFilter {
+  type?: Asset['type'];
+  category?: Asset['category'];
+  searchTerm?: string;
+  sortBy?: 'name' | 'uploadedAt' | 'lastUsed' | 'size';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface AssetManagerState {
+  assets: Asset[];
+  isUploading: boolean;
+  uploadProgress: number;
+  selectedAssets: string[];
+  filter: AssetLibraryFilter;
+  previewAsset: Asset | null;
 }

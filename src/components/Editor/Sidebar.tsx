@@ -1,8 +1,8 @@
 import React from 'react';
-import { useEditorStore } from '@stores/editorStore';
-import { Button } from '@components/UI';
+import { useEditorStore } from '../../stores/editorStore';
+import { Button } from '../UI';
 import { Trash2 } from 'lucide-react';
-import { clsx } from '@utils/index';
+import { clsx } from '../../utils';
 
 export const Sidebar: React.FC = () => {
   const { 

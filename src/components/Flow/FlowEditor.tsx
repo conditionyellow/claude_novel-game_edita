@@ -1,9 +1,9 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import ReactFlow, { useNodesState, useEdgesState, Node, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { useEditorStore } from '@stores/editorStore';
+import { useEditorStore } from '../../stores/editorStore';
 import { ParagraphNode } from './ParagraphNode';
-import { Button } from '@/components/UI';
+import { Button } from '../UI';
 
 // カスタムノードタイプの定義
 const nodeTypes = {
