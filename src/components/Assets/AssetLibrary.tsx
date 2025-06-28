@@ -215,7 +215,12 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 ${selectedAssetIds.includes(asset.id) ? 'ring-2 ring-blue-500' : 'border-gray-200'}
                 ${viewMode === 'grid' ? 'aspect-square' : 'p-4'}
               `}
-              onClick={() => onAssetSelect?.(asset)}
+              onClick={() => {
+                // アセット直接クリックでプレビューモーダルを開く
+                setPreviewAsset(asset);
+                // 選択処理も実行
+                onAssetSelect?.(asset);
+              }}
             >
               {viewMode === 'grid' ? (
                 // グリッドビュー

@@ -91,6 +91,9 @@ export const EditorLayout: React.FC = () => {
               assets={currentProject?.assets || []}
               onAssetUpload={addAsset}
               onAssetDelete={deleteAsset}
+              onAssetSelect={(asset) => {
+                // 将来的にはアセット編集モーダルなどを開く
+              }}
               mode="manage"
               className="h-full"
             />

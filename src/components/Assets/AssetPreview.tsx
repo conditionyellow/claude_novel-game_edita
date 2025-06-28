@@ -135,7 +135,21 @@ export const AssetPreview: React.FC<AssetPreviewProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
       <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
