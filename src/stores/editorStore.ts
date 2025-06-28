@@ -3,6 +3,11 @@ import { devtools, persist } from 'zustand/middleware';
 import { EditorState, NovelProject, Paragraph, Asset } from '../types';
 import { createEmptyProject, createEmptyParagraph } from '../utils';
 
+// 既存のLocalStorageデータをクリア（容量問題解決のため）
+if (typeof window !== 'undefined') {
+  localStorage.removeItem('novel-editor-store');
+}
+
 interface EditorStore extends EditorState {
   // Actions
   createNewProject: () => void;
@@ -31,10 +36,10 @@ interface EditorStore extends EditorState {
   clearModified: () => void;
 }
 
+// LocalStorage永続化を無効化して容量問題を回避
 export const useEditorStore = create<EditorStore>()(
   devtools(
-    persist(
-      (set, get) => ({
+    (set, get) => ({
         // Initial state
         currentProject: null,
         selectedParagraphId: null,
@@ -313,15 +318,6 @@ export const useEditorStore = create<EditorStore>()(
           set({ isModified: false });
         },
       }),
-      {
-        name: 'novel-editor-store',
-        partialize: (state) => ({
-          currentProject: state.currentProject,
-          selectedParagraphId: state.selectedParagraphId,
-          mode: state.mode,
-        }),
-      }
-    ),
     { name: 'EditorStore' }
   )
 );

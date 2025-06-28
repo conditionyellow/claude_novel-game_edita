@@ -158,13 +158,21 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
       <div className="flex-1 flex flex-col justify-center items-center p-8">
         <div className="bg-gray-800 rounded-lg shadow-2xl max-w-4xl w-full min-h-[400px] flex flex-col">
           
-          {/* 背景画像エリア（将来実装） */}
+          {/* 背景画像エリア */}
           <div className="flex-1 bg-gray-700 rounded-t-lg relative overflow-hidden min-h-[200px]">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-gray-500 text-sm">
-                背景画像（将来実装予定）
+            {currentParagraph.content.background ? (
+              <img
+                src={currentParagraph.content.background.url}
+                alt={currentParagraph.content.background.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-gray-500 text-sm">
+                  背景画像なし
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* テキストエリア */}
