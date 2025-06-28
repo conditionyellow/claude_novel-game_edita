@@ -82,10 +82,36 @@ export const useEditorStore = create<EditorStore>()(
           const { currentProject } = get();
           if (!currentProject) return;
 
-          // TODO: Implement actual save logic (localStorage, API, etc.)
-          console.log('Saving project:', currentProject);
-          
-          set({ isModified: false });
+          try {
+            // プロジェクトデータをJSONとしてエクスポート
+            const projectData = JSON.stringify(currentProject, null, 2);
+            
+            // ファイル名を生成（プロジェクト名 + 日時）
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+            const fileName = `${currentProject.title}_${timestamp}.json`;
+            
+            // Blobを作成してダウンロード
+            const blob = new Blob([projectData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            // 隠しリンクを作成してクリック
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            
+            // クリーンアップ
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            console.log('Project saved as:', fileName);
+            set({ isModified: false });
+          } catch (error) {
+            console.error('Save error:', error);
+            alert('プロジェクトの保存に失敗しました。');
+          }
         },
 
         // Paragraph actions
