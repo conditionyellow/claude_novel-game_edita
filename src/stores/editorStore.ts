@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { EditorState, NovelProject, Paragraph, Asset } from '../types';
 import { createEmptyProject, createEmptyParagraph } from '../utils';
+import { assetStorage } from '../utils/assetStorageManager';
 
 // 既存のLocalStorageデータをクリア（容量問題解決のため）
 if (typeof window !== 'undefined') {
@@ -23,10 +24,13 @@ interface EditorStore extends EditorState {
   
   // Asset actions
   addAsset: (asset: Asset) => void;
+  addAssetWithFile: (asset: Asset, file: File) => Promise<Asset>; // 新しいIndexedDB対応メソッド
   updateAsset: (id: string, updates: Partial<Asset>) => void;
   deleteAsset: (id: string) => void;
   getAssetsByCategory: (category: Asset['category']) => Asset[];
   getAssetsByType: (type: Asset['type']) => Asset[];
+  loadProjectAssets: (projectId: string) => Promise<void>; // IndexedDBからアセット読み込み
+  getAssetUrl: (assetId: string) => Promise<string>; // アセットURL取得
   
   // Mode actions
   setMode: (mode: 'editor' | 'flow' | 'preview' | 'assets') => void;
@@ -231,6 +235,47 @@ export const useEditorStore = create<EditorStore>()(
           });
         },
 
+        // 新しいIndexedDB対応アセット追加メソッド
+        addAssetWithFile: async (asset: Asset, file: File): Promise<Asset> => {
+          const { currentProject } = get();
+          if (!currentProject) throw new Error('No current project');
+
+          try {
+            // IndexedDBに保存
+            const url = await assetStorage.saveAsset(currentProject.id, asset, file);
+            
+            // URLを更新したアセットを作成
+            const savedAsset: Asset = {
+              ...asset,
+              url, // IndexedDBから返されたObjectURL
+              metadata: {
+                ...asset.metadata,
+                lastUsed: new Date()
+              }
+            };
+
+            // メタデータをstateに保存（URLは動的に生成されるため除外してもよい）
+            const updatedAssets = [...currentProject.assets, savedAsset];
+            
+            set({
+              currentProject: {
+                ...currentProject,
+                assets: updatedAssets,
+                metadata: {
+                  ...currentProject.metadata,
+                  modified: new Date(),
+                },
+              },
+              isModified: true,
+            });
+
+            return savedAsset;
+          } catch (error) {
+            console.error('Failed to save asset:', error);
+            throw error;
+          }
+        },
+
         updateAsset: (id: string, updates: Partial<Asset>) => {
           const { currentProject } = get();
           if (!currentProject) return;
@@ -261,9 +306,17 @@ export const useEditorStore = create<EditorStore>()(
           });
         },
 
-        deleteAsset: (id: string) => {
+        deleteAsset: async (id: string) => {
           const { currentProject } = get();
           if (!currentProject) return;
+
+          try {
+            // IndexedDBからも削除
+            await assetStorage.deleteAsset(currentProject.id, id);
+          } catch (error) {
+            console.error('Failed to delete asset from storage:', error);
+            // ストレージ削除が失敗してもUI上は削除を進める
+          }
 
           const updatedAssets = currentProject.assets.filter(asset => asset.id !== id);
 
@@ -302,6 +355,45 @@ export const useEditorStore = create<EditorStore>()(
           const { currentProject } = get();
           if (!currentProject) return [];
           return currentProject.assets.filter(asset => asset.type === type);
+        },
+
+        // IndexedDBからプロジェクトのアセット一覧を読み込み
+        loadProjectAssets: async (projectId: string) => {
+          try {
+            const assets = await assetStorage.getProjectAssets(projectId);
+            const { currentProject } = get();
+            
+            if (currentProject && currentProject.id === projectId) {
+              set({
+                currentProject: {
+                  ...currentProject,
+                  assets,
+                },
+              });
+            }
+          } catch (error) {
+            console.error('Failed to load project assets:', error);
+          }
+        },
+
+        // アセットURL取得（IndexedDBから動的生成）
+        getAssetUrl: async (assetId: string): Promise<string> => {
+          const { currentProject } = get();
+          if (!currentProject) throw new Error('No current project');
+
+          try {
+            return await assetStorage.getAssetUrl(currentProject.id, assetId);
+          } catch (error) {
+            console.error('Failed to get asset URL:', error);
+            
+            // フォールバック: stateからBase64 URLを取得
+            const asset = currentProject.assets.find(a => a.id === assetId);
+            if (asset && asset.url.startsWith('data:')) {
+              return asset.url;
+            }
+            
+            throw error;
+          }
         },
 
         // Mode actions

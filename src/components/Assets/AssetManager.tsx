@@ -7,7 +7,7 @@ import { AssetLibrary } from './AssetLibrary';
 
 interface AssetManagerProps {
   assets: Asset[];
-  onAssetUpload: (asset: Asset) => void;
+  onAssetUpload: (asset: Asset, file: File) => void; // Fileオブジェクトも受け取るように変更
   onAssetDelete: (assetId: string) => void;
   onAssetSelect?: (asset: Asset) => void;
   className?: string;
@@ -25,8 +25,8 @@ export const AssetManager: React.FC<AssetManagerProps> = ({
   const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library');
   const [uploadCategory, setUploadCategory] = useState<Asset['category']>('background');
 
-  const handleUpload = (asset: Asset) => {
-    onAssetUpload(asset);
+  const handleUpload = (asset: Asset, file: File) => {
+    onAssetUpload(asset, file); // Fileオブジェクトも渡す
     setActiveTab('library'); // アップロード後はライブラリ表示に戻る
   };
 

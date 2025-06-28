@@ -9,7 +9,7 @@ import { Preview } from './Preview';
 import { AssetManager } from '../Assets';
 
 export const EditorLayout: React.FC = () => {
-  const { mode, currentProject, createNewProject, addAsset, deleteAsset } = useEditorStore();
+  const { mode, currentProject, createNewProject, addAsset, addAssetWithFile, deleteAsset } = useEditorStore();
   
   console.log('=================== EditorLayout Render ===================');
   console.log('EditorLayout - Current mode:', mode);
@@ -25,6 +25,17 @@ export const EditorLayout: React.FC = () => {
       createNewProject();
     }
   }, [currentProject, createNewProject]);
+
+  // 新しいIndexedDB対応のアセットアップロード
+  const handleAssetUpload = async (asset: Asset, file: File) => {
+    try {
+      await addAssetWithFile(asset, file);
+    } catch (error) {
+      console.error('Asset upload failed:', error);
+      // フォールバック: 従来のBase64方式
+      addAsset(asset);
+    }
+  };
 
   const renderMainContent = () => {
     // 画面に直接情報を表示
@@ -89,7 +100,7 @@ export const EditorLayout: React.FC = () => {
           <div className="h-full">
             <AssetManager
               assets={currentProject?.assets || []}
-              onAssetUpload={addAsset}
+              onAssetUpload={handleAssetUpload}
               onAssetDelete={deleteAsset}
               onAssetSelect={(asset) => {
                 // 将来的にはアセット編集モーダルなどを開く

@@ -2,7 +2,7 @@ import React from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 import { Input, Textarea, Button } from '../UI';
 import { ChoiceEditor } from './ChoiceEditor';
-import { Plus, Image, X } from 'lucide-react';
+import { Plus, Image, X, Music } from 'lucide-react';
 import { generateId } from '../../utils';
 import { Asset } from '../../types';
 
@@ -115,8 +115,21 @@ export const ParagraphEditor: React.FC = () => {
     });
   };
 
+  const handleUpdateBgm = (asset: Asset | null) => {
+    updateParagraph(selectedParagraph.id, {
+      content: {
+        ...selectedParagraph.content,
+        bgm: asset || undefined,
+      },
+    });
+  };
+
   const availableBackgrounds = currentProject?.assets.filter(
     asset => asset.type === 'image' && (asset.category === 'background' || asset.category === 'other')
+  ) || [];
+
+  const availableBgm = currentProject?.assets.filter(
+    asset => asset.type === 'audio' && (asset.category === 'bgm' || asset.category === 'other')
   ) || [];
 
   return (
@@ -296,6 +309,94 @@ export const ParagraphEditor: React.FC = () => {
                 value={selectedParagraph.content.background.id}
               >
                 {availableBackgrounds.map(asset => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* BGM設定 */}
+          <div className="space-y-3">
+            <h3 className="text-md font-medium text-gray-800">BGM</h3>
+            
+            {selectedParagraph.content.bgm ? (
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-start space-x-4">
+                  <div className="w-24 h-16 bg-gray-100 rounded border flex items-center justify-center">
+                    <Music className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {selectedParagraph.content.bgm.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {selectedParagraph.content.bgm.metadata.duration ? 
+                        `${Math.floor(selectedParagraph.content.bgm.metadata.duration / 60)}:${String(Math.floor(selectedParagraph.content.bgm.metadata.duration % 60)).padStart(2, '0')}` : 
+                        '長さ不明'}
+                    </p>
+                    <audio 
+                      controls 
+                      className="mt-2 w-full h-8"
+                      preload="metadata"
+                    >
+                      <source src={selectedParagraph.content.bgm.url} />
+                      お使いのブラウザは音声再生に対応していません。
+                    </audio>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleUpdateBgm(null)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <Music className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600 mb-3">BGMが設定されていません</p>
+                {availableBgm.length > 0 ? (
+                  <select
+                    onChange={(e) => {
+                      const asset = availableBgm.find(a => a.id === e.target.value);
+                      if (asset) handleUpdateBgm(asset);
+                    }}
+                    className="block mx-auto px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    defaultValue=""
+                  >
+                    <option value="">BGMを選択...</option>
+                    {availableBgm.map(asset => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    アセット管理からBGMをアップロードしてください
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {availableBgm.length > 0 && selectedParagraph.content.bgm && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">他のBGMに変更:</p>
+              <select
+                onChange={(e) => {
+                  const asset = availableBgm.find(a => a.id === e.target.value);
+                  if (asset && asset.id !== selectedParagraph.content.bgm?.id) {
+                    handleUpdateBgm(asset);
+                  }
+                }}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                value={selectedParagraph.content.bgm.id}
+              >
+                {availableBgm.map(asset => (
                   <option key={asset.id} value={asset.id}>
                     {asset.name}
                   </option>

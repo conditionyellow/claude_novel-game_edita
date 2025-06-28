@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid';
 
 interface AssetUploaderProps {
   options: AssetUploadOptions;
-  onUpload: (asset: Asset) => void;
+  onUpload: (asset: Asset, file: File) => void; // Fileオブジェクトも渡すように変更
   onValidationError?: (errors: string[]) => void;
   className?: string;
 }
@@ -154,7 +154,7 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
       
       // 少し待ってからコールバック実行
       setTimeout(() => {
-        onUpload(asset);
+        onUpload(asset, file); // Fileオブジェクトも渡す
         setIsUploading(false);
         setUploadProgress(0);
         setValidationResult(null);

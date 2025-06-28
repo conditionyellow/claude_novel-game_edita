@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Paragraph, NovelProject } from '../types';
 import { Play, RotateCcw, Home } from 'lucide-react';
 import { Button } from '../components/UI';
@@ -11,6 +11,7 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
   const [currentParagraph, setCurrentParagraph] = useState<Paragraph | null>(null);
   const [gameHistory, setGameHistory] = useState<string[]>([]);
   const [isGameStarted, setIsGameStarted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // ゲーム開始時に最初のパラグラフを設定
   useEffect(() => {
@@ -19,6 +20,44 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
       setCurrentParagraph(startParagraph);
     }
   }, [project]);
+
+  // BGM制御のuseEffect
+  useEffect(() => {
+    if (!isGameStarted || !currentParagraph) return;
+
+    const playBgm = (bgmUrl: string) => {
+      if (audioRef.current) {
+        if (audioRef.current.src !== bgmUrl) {
+          audioRef.current.src = bgmUrl;
+        }
+        audioRef.current.loop = true;
+        audioRef.current.volume = 0.7;
+        audioRef.current.play().catch(error => {
+          console.log('BGM autoplay prevented:', error);
+        });
+      }
+    };
+
+    const stopBgm = () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+
+    if (currentParagraph.content.bgm) {
+      playBgm(currentParagraph.content.bgm.url);
+    } else {
+      stopBgm();
+    }
+
+    // クリーンアップ関数
+    return () => {
+      if (!currentParagraph?.content.bgm) {
+        stopBgm();
+      }
+    };
+  }, [currentParagraph, isGameStarted]);
 
   const startGame = () => {
     setIsGameStarted(true);
@@ -35,6 +74,12 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
     setGameHistory([]);
     const startParagraph = project.paragraphs.find(p => p.type === 'start') || project.paragraphs[0];
     setCurrentParagraph(startParagraph);
+    
+    // BGMを停止
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
   };
 
   const selectChoice = (targetParagraphId: string) => {
@@ -124,6 +169,8 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
 
   return (
     <div className="flex-1 flex flex-col bg-gray-900 text-white">
+      {/* BGM用のaudio要素（非表示） */}
+      <audio ref={audioRef} style={{ display: 'none' }} />
       {/* ゲームコントロール */}
       <div className="bg-gray-800 p-3 border-b border-gray-700">
         <div className="flex items-center justify-between">
