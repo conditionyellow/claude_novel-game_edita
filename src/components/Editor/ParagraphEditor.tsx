@@ -106,8 +106,8 @@ export const ParagraphEditor: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto h-full">
+      <div className="max-w-4xl mx-auto p-6 space-y-6 min-h-full">
         {/* ヘッダー */}
         <div className="border-b border-gray-200 pb-4">
           <h1 className="text-2xl font-bold text-gray-900">パラグラフ編集</h1>
@@ -213,6 +213,9 @@ export const ParagraphEditor: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* 下部余白 - スクロール時の視認性確保 */}
+        <div className="h-24"></div>
       </div>
     </div>
   );
