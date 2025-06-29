@@ -147,3 +147,8 @@ export const formatFileSize = (bytes: number): string => {
 export const clsx = (...classes: (string | undefined | null | false)[]): string => {
   return classes.filter(Boolean).join(' ');
 };
+
+// 新しいユーティリティのエクスポート
+export { ValidationService, validateProject as validateProjectNew, validateParagraphs, validateForEditor } from './validation';
+export { MemoryManager } from './memoryManager';
+export { DebugLogger, getDebugInfo } from './debug';

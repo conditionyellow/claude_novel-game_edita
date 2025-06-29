@@ -1,146 +1,98 @@
-export interface Asset {
-  id: string;
-  name: string;
-  url: string;
-  type: 'image' | 'audio';
-  category: 'background' | 'character' | 'bgm' | 'se' | 'other';
-  metadata: {
-    size: number;
-    format: string;
-    duration?: number;
-    dimensions?: { width: number; height: number };
-    uploadedAt: Date;
-    lastUsed?: Date;
-  };
+/**
+ * 型定義の統合エクスポート
+ * 全ての型定義を一箇所から利用できるように re-export
+ */
+
+// アセット関連
+export type {
+  Asset,
+  AssetMetadata,
+  AssetDimensions,
+  AssetUploadOptions,
+  AssetValidationResult,
+  AssetLibraryFilter,
+  AssetManagerState,
+  AssetType,
+  AssetCategory,
+  AssetSortField,
+  SortOrder,
+} from './asset';
+
+// ストーリー関連
+export type {
+  Character,
+  Choice,
+  Condition,
+  ParagraphType,
+  ParagraphContent,
+  ParagraphMetadata,
+  ParagraphPosition,
+  Paragraph,
+  CharacterPosition,
+  ConditionOperator,
+  ConditionType,
+} from './story';
+
+// プロジェクト関連
+export type {
+  ThemeColors,
+  ProjectResolution,
+  ProjectSettings,
+  ProjectMetadata,
+  NovelProject,
+  ProjectCreateOptions,
+  ProjectUpdatePayload,
+  ProjectValidationResult,
+  ProjectStatistics,
+} from './project';
+
+// エディター関連
+export type {
+  EditorMode,
+  EditorState,
+  ParagraphNodeData,
+  ChoiceEdgeData,
+  FlowState,
+  ParagraphUpdatePayload,
+  ChoiceUpdatePayload,
+  UIState,
+  EditorAction,
+  EditorHistory,
+  EditorValidationError,
+} from './editor';
+
+// ゲーム実行時関連
+export type {
+  GameState,
+  SaveData,
+  GameConfig,
+  GameHistory,
+  GameStats,
+  BuildConfig,
+  BuildResult,
+  AssetManifest,
+  DebugInfo,
+} from './game';
+
+// 共通ユーティリティ型
+export type ID = string;
+export type Timestamp = Date;
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+// 一般的な操作結果型
+export interface OperationResult<T = void> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  warnings?: string[];
 }
 
-export interface Character {
-  id: string;
-  name: string;
-  sprite: Asset;
-  position: 'left' | 'center' | 'right';
-  expression?: string;
-}
-
-export interface Choice {
-  id: string;
-  text: string;
-  targetParagraphId: string;
-  condition?: Condition;
-}
-
-export interface Condition {
-  type: 'flag' | 'variable';
-  key: string;
-  operator: '==' | '!=' | '>' | '<' | '>=' | '<=';
-  value: string | number | boolean;
-}
-
-export type ParagraphType = 'start' | 'middle' | 'end';
-
-export interface Paragraph {
-  id: string;
-  type: ParagraphType;
-  title: string;
-  content: {
-    text: string;
-    choices: Choice[];
-    background?: Asset;
-    characters?: Character[];
-    bgm?: Asset;
-  };
-  position?: { x: number; y: number };
-  metadata: {
-    created: Date;
-    modified: Date;
-    tags?: string[];
-  };
-}
-
-export interface ThemeColors {
-  primary: string;
-  secondary: string;
-  background: string;
-  text: string;
-  accent: string;
-}
-
-export interface ProjectSettings {
-  defaultFont: string;
-  defaultFontSize: number;
-  themeColors: ThemeColors;
-  resolution: { width: number; height: number };
-}
-
-export interface NovelProject {
-  id: string;
-  title: string;
-  description: string;
-  version: string;
-  paragraphs: Paragraph[];
-  assets: Asset[];
-  characters: Character[];
-  settings: ProjectSettings;
-  metadata: {
-    created: Date;
-    modified: Date;
-    author: string;
-  };
-}
-
-export interface EditorState {
-  currentProject: NovelProject | null;
-  selectedParagraphId: string | null;
-  mode: 'editor' | 'flow' | 'preview' | 'assets';
-  isModified: boolean;
-}
-
-// React Flow統合用の型定義
-export interface ParagraphNodeData {
-  paragraph: Paragraph;
-  isSelected?: boolean;
-  onSelect?: (id: string) => void;
-  onDelete?: (id: string) => void;
-}
-
-export interface ChoiceEdgeData {
-  choice?: Choice;
-  condition?: Condition;
-  onDelete?: (edgeId: string) => void;
-}
-
-export interface FlowState {
-  selectedNodeId: string | null;
-}
-
-// アセット管理用の型定義
-export interface AssetUploadOptions {
-  category: Asset['category'];
-  maxSize?: number;
-  allowedFormats?: string[];
-  autoOptimize?: boolean;
-}
-
-export interface AssetValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  optimizedSize?: number;
-}
-
-export interface AssetLibraryFilter {
-  type?: Asset['type'];
-  category?: Asset['category'];
-  searchTerm?: string;
-  sortBy?: 'name' | 'uploadedAt' | 'lastUsed' | 'size';
-  sortOrder?: 'asc' | 'desc';
-}
-
-export interface AssetManagerState {
-  assets: Asset[];
-  isUploading: boolean;
-  uploadProgress: number;
-  selectedAssets: string[];
-  filter: AssetLibraryFilter;
-  previewAsset: Asset | null;
+// 非同期操作の状態
+export interface AsyncState<T> {
+  loading: boolean;
+  data: T | null;
+  error: string | null;
 }

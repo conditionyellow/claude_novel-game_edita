@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import { useEditorStore } from '../../stores/editorStore';
+import type { Asset } from '../../types';
 import { Toolbar } from './Toolbar';
 import { Sidebar } from './Sidebar';
 import { ParagraphEditor } from './ParagraphEditor';
@@ -67,7 +68,7 @@ export const EditorLayout: React.FC = () => {
               assets={currentProject?.assets || []}
               onAssetUpload={handleAssetUpload}
               onAssetDelete={deleteAsset}
-              onAssetSelect={(asset) => {
+              onAssetSelect={(_asset) => {
                 // 将来的にはアセット編集モーダルなどを開く
               }}
               mode="manage"

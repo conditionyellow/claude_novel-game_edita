@@ -1,3 +1,8 @@
+/**
+ * @deprecated このファイルは非推奨です。新しい分割されたstore（useAppStore）を使用してください
+ * 下位互換性のために一時的に保持されています
+ */
+
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { EditorState, NovelProject, Paragraph, Asset } from '../types';
