@@ -1040,9 +1040,10 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-size: cover;
+    background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
+    background-color: #1a1a1a;
     z-index: 1;
 }
 
@@ -1051,17 +1052,26 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    padding: 15px;
     z-index: 10;
+    max-height: 40vh;
+    overflow-y: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #text-area {
-    background: rgba(0, 0, 0, 0.9);
-    padding: 30px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    min-height: 150px;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    min-height: 100px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 #paragraph-title {
@@ -1069,37 +1079,47 @@ body {
     font-weight: bold;
     margin-bottom: 15px;
     color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 #paragraph-text {
     font-size: 1.1rem;
     line-height: 1.8;
     color: #f0f0f0;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 #choices-area {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .choice-btn {
     display: block;
     width: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    border: 2px solid rgba(255, 255, 255, 0.4);
     color: #fff;
-    padding: 15px 20px;
-    margin: 10px 0;
-    border-radius: 5px;
+    padding: 12px 16px;
+    margin: 6px 0;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
     text-align: left;
     transition: all 0.3s ease;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .choice-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-color: rgba(255, 255, 255, 0.7);
     transform: translateX(10px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
 }
 
 .game-controls {
@@ -1222,12 +1242,13 @@ body {
     }
     
     .game-ui {
-        padding: 15px;
+        padding: 12px;
+        max-height: 45vh;
     }
     
     #text-area {
-        padding: 20px;
-        min-height: 120px;
+        padding: 16px;
+        min-height: 80px;
     }
     
     #paragraph-title {
@@ -1259,12 +1280,13 @@ body {
     }
     
     .game-ui {
-        padding: 10px;
+        padding: 8px;
+        max-height: 50vh;
     }
     
     #text-area {
-        padding: 15px;
-        min-height: 100px;
+        padding: 12px;
+        min-height: 60px;
     }
 }`;
   }

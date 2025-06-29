@@ -202,19 +202,19 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
       </div>
 
       {/* ゲーム画面 */}
-      <div className="flex-1 flex flex-col justify-center items-center p-8">
-        <div className="bg-gray-800 rounded-lg shadow-2xl max-w-4xl w-full min-h-[400px] flex flex-col">
+      <div className="flex-1 flex flex-col justify-center items-center p-4">
+        <div className="bg-gray-800 rounded-lg shadow-2xl max-w-5xl w-full h-[85vh] relative overflow-hidden">
           
-          {/* 背景画像エリア */}
-          <div className="flex-1 bg-gray-700 rounded-t-lg relative overflow-hidden min-h-[200px]">
+          {/* 背景画像エリア（全画面表示） */}
+          <div className="absolute inset-0 bg-gray-700 z-0">
             {currentParagraph.content.background ? (
               <img
                 src={currentParagraph.content.background.url}
                 alt={currentParagraph.content.background.name}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="w-full h-full object-contain bg-gray-900"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center">
                 <div className="text-gray-500 text-sm">
                   背景画像なし
                 </div>
@@ -222,25 +222,46 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
             )}
           </div>
 
-          {/* テキストエリア */}
-          <div className="bg-black bg-opacity-80 p-6 rounded-b-lg">
-            <div className="prose prose-invert max-w-none">
-              <p className="text-lg leading-relaxed whitespace-pre-wrap">
-                {currentParagraph.content.text || '（テキストが設定されていません）'}
-              </p>
+          {/* テキストエリア（オーバーレイ） */}
+          <div className="absolute bottom-0 left-0 right-0 z-50 backdrop-blur-md p-6 max-h-[45%] min-h-[30%] overflow-y-auto border-t border-gray-600 shadow-2xl" style={{ position: 'absolute', bottom: '0', left: '0', right: '0' }}>
+            
+            {/* 本文エリア */}
+            <div className="mb-4">
+              <div 
+                className="p-4 rounded-lg backdrop-blur-sm border border-gray-400 border-opacity-50"
+                style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+              >
+                <p className="text-lg leading-relaxed whitespace-pre-wrap drop-shadow-lg" style={{ color: 'white', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.9), 1px 1px 2px rgba(0, 0, 0, 1)' }}>
+                  {currentParagraph.content.text || '（テキストが設定されていません）'}
+                </p>
+              </div>
             </div>
 
-            {/* 選択肢 */}
+            {/* 選択肢エリア */}
             {!isEndParagraph && currentParagraph.content.choices.length > 0 && (
-              <div className="mt-6 space-y-3">
+              <div className="space-y-2">
                 {currentParagraph.content.choices.map((choice, index) => (
                   <Button
                     key={choice.id}
                     onClick={() => selectChoice(choice.targetParagraphId)}
                     variant="secondary"
-                    className="w-full text-left justify-start bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+                    className="w-full text-left justify-start py-2 px-4 text-sm backdrop-blur-sm shadow-lg rounded-lg"
+                    style={{ 
+                      backgroundColor: 'rgba(0, 0, 0, 0.3)', 
+                      color: 'white',
+                      border: '2px solid rgba(255, 255, 255, 0.6)',
+                      borderRadius: '8px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                    }}
                   >
-                    {index + 1}. {choice.text}
+                    <span className="drop-shadow-md">{index + 1}. {choice.text}</span>
                   </Button>
                 ))}
               </div>
@@ -248,17 +269,23 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
 
             {/* エンド画面 */}
             {isEndParagraph && (
-              <div className="mt-6 text-center">
-                <div className="text-gray-400 mb-4">
+              <div className="mt-4 text-center">
+                <div className="text-gray-300 mb-3 text-sm drop-shadow-md">
                   {currentParagraph.type === 'end' ? '--- END ---' : '--- 選択肢がありません ---'}
                 </div>
                 <Button 
                   onClick={resetGame}
                   variant="primary"
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="py-2 px-4 text-sm backdrop-blur-sm shadow-lg rounded-lg"
+                  style={{ 
+                    backgroundColor: 'rgba(37, 99, 235, 0.3)', 
+                    color: 'white',
+                    border: '2px solid rgba(59, 130, 246, 0.6)',
+                    borderRadius: '8px'
+                  }}
                 >
                   <Home className="w-4 h-4 mr-2" />
-                  タイトルに戻る
+                  <span className="drop-shadow-md">タイトルに戻る</span>
                 </Button>
               </div>
             )}
