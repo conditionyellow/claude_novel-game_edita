@@ -705,6 +705,13 @@ describe('Editor Workflow', () => {
     - 選択肢視覚的区別: 白枠境界線+ホバー効果による操作可能要素の明確化 ✅
     - テキストシャドウ強化: 複数シャドウレイヤーによる文字の輪郭強調 ✅
     - 画面下部固定UI: 絶対位置指定による確実な配置制御 ✅
+17. **ツールチップシステム**: メニューアイコンのユーザビリティ向上 ✅
+    - Tooltipコンポーネント改良: アクセシビリティ・フォーカス・ダークモード対応 ✅
+    - Toolbarツールチップ統合: 全アイコンに適切な説明文追加 ✅
+    - 条件付き無効化: disabled状態での適切な非表示制御 ✅
+    - パフォーマンス最適化: メモリリーク防止・適切な重ね順制御 ✅
+    - レスポンシブ対応: 各画面サイズでの適切な表示 ✅
+    - キーボードナビゲーション: フォーカス時のツールチップ表示対応 ✅
 
 ### ⏳ 次回実装予定
 1. **キャラクター立ち絵システム**: キャラクターアセット表示機能
@@ -1238,6 +1245,100 @@ if (nodesInLevel === 1) {
 - **完全重複対応**: ランダム角度による押し出し（ゼロ距離問題解決）
 - **累積力システム**: 全ペア衝突の総合力計算
 - **減衰制御**: `Math.max(0.3, 1.0 - iteration/25)`による安定収束
+
+### Phase 9: ツールチップシステム実装完了 ✅
+
+#### 実装内容
+2024年6月29日追加実装：
+
+##### Tooltipコンポーネント改良
+- **アクセシビリティ向上**: role="tooltip", aria-hidden属性対応
+- **フォーカス対応**: onFocus/onBlur イベントでキーボードナビゲーション対応
+- **ダークモード対応**: dark:bg-gray-700 でのテーマ切り替え
+- **disabled状態対応**: 無効化されたボタンでのツールチップ非表示
+- **メモリリーク防止**: useEffect cleanup でタイムアウトクリア
+- **パフォーマンス最適化**: z-index [60] で適切な重ね順制御
+
+##### Toolbarツールチップ統合
+- **ファイル操作ツールチップ**: 「プロジェクトファイルを開く」「プロジェクトを保存」「ゲームをビルドして出力」
+- **モードナビゲーションツールチップ**: 「パラグラフエディタ - ストーリーの編集」「フローエディタ - ストーリーの構造を視覚的に編集」「ゲームプレビュー - 作成したゲームをテストプレイ」「アセット管理 - 画像・音声ファイルの管理」
+- **アクションツールチップ**: 「新しいパラグラフを追加」
+- **条件付き無効化**: disabled状態のボタンではツールチップを非表示
+
+#### 技術実装詳細
+
+##### 改良されたTooltipコンポーネント
+```typescript
+export const Tooltip: React.FC<TooltipProps> = ({
+  content,
+  children,
+  position = 'bottom',
+  delay = 500,
+  disabled = false,
+  className,
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showTooltip = () => {
+    if (disabled || !content) return;
+    
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(true);
+    }, delay);
+  };
+
+  // アクセシビリティとフォーカス対応
+  return (
+    <div
+      onMouseEnter={showTooltip}
+      onMouseLeave={hideTooltip}
+      onFocus={showTooltip}
+      onBlur={hideTooltip}
+    >
+      {children}
+      {isVisible && content && (
+        <div
+          role="tooltip"
+          aria-hidden="true"
+          className="absolute z-[60] px-2 py-1 text-xs font-medium text-white bg-gray-900 dark:bg-gray-700 rounded shadow-lg whitespace-nowrap pointer-events-none transition-opacity duration-200"
+        >
+          {content}
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+##### Toolbarでの使用例
+```typescript
+// ファイル操作ボタン
+<Tooltip content="プロジェクトファイルを開く" position="bottom">
+  <Button variant="ghost" size="sm" onClick={handleOpenFile}>
+    <FolderOpen className="w-4 h-4" />
+    <span className="ml-2 hidden sm:inline">開く</span>
+  </Button>
+</Tooltip>
+
+// 条件付き無効化
+<Tooltip content="プロジェクトを保存" position="bottom" disabled={!isModified}>
+  <Button disabled={!isModified} onClick={handleSave}>
+    <Save className="w-4 h-4" />
+    <span className="ml-2 hidden sm:inline">保存</span>
+  </Button>
+</Tooltip>
+```
+
+#### 動作確認完了項目
+- **マウスオーバー表示**: アイコンホバー時の適切なツールチップ表示確認 ✅
+- **フォーカス表示**: キーボードナビゲーション時のツールチップ表示確認 ✅
+- **ダークモード対応**: テーマ切り替え時の適切な色彩変更確認 ✅
+- **disabled状態処理**: 無効化ボタンでのツールチップ非表示確認 ✅
+- **遅延表示**: 500ms遅延での表示タイミング確認 ✅
+- **位置調整**: bottom位置での適切な配置確認 ✅
+- **レスポンシブ対応**: 各画面サイズでの表示確認 ✅
+- **メモリ管理**: コンポーネントアンマウント時のクリーンアップ確認 ✅
 
 #### 技術実装詳細
 
