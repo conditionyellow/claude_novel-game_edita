@@ -3,9 +3,11 @@ import { Paragraph, Choice, ParagraphNodeData, ChoiceEdgeData } from '../types';
 import { generateId } from './index';
 
 // 自動レイアウト用の定数
-const HORIZONTAL_SPACING = 400;
-const VERTICAL_SPACING = 200;
-const MIN_NODE_SPACING = 150; // 最小ノード間隔
+const HORIZONTAL_SPACING = 500;
+const VERTICAL_SPACING = 300;
+const MIN_NODE_SPACING = 200; // 最小ノード間隔
+const NODE_WIDTH = 300; // ノード幅
+const NODE_HEIGHT = 200; // ノード高さ
 
 // パラグラフからフローノードを作成
 export const createFlowNode = (
@@ -139,14 +141,18 @@ export const convertParagraphsToFlow = (
   return { nodes, edges };
 };
 
-// 改善された自動レイアウト（重複回避・適切な間隔調整）
+// グリッドベース自動レイアウト（重複完全回避）
 export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
   if (nodes.length === 0) return nodes;
 
+  console.log('=== Auto Layout Algorithm Start ===');
+  console.log('Input nodes:', nodes.length);
+  console.log('Input edges:', edges.length);
+
+  // エッジ情報を整理
   const incomingEdges = new Map<string, Edge[]>();
   const outgoingEdges = new Map<string, Edge[]>();
 
-  // エッジ情報を整理
   edges.forEach(edge => {
     const incoming = incomingEdges.get(edge.target) || [];
     incoming.push(edge);
@@ -157,80 +163,111 @@ export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
     outgoingEdges.set(edge.source, outgoing);
   });
 
-  // ルートノード（スタートノード）を見つける
+  // ノードを階層別に分類
+  const levels = new Map<number, string[]>();
+  const nodeToLevel = new Map<string, number>();
+  const visited = new Set<string>();
+
+  // ルートノード（スタートノードまたは入力エッジなし）を見つける
   const rootNodes = nodes.filter(node => 
     (node.data as any)?.paragraph?.type === 'start' || 
     !incomingEdges.has(node.id)
   );
 
-  if (rootNodes.length === 0) {
-    // ルートノードがない場合は、最初のノードをルートとして扱う
-    rootNodes.push(nodes[0]);
+  console.log('Root nodes found:', rootNodes.length);
+
+  // BFSで階層を決定
+  const queue: Array<{ nodeId: string; level: number }> = [];
+  
+  // ルートノードを処理
+  rootNodes.forEach(rootNode => {
+    queue.push({ nodeId: rootNode.id, level: 0 });
+  });
+
+  // 孤立ノードも処理対象に追加
+  nodes.forEach(node => {
+    if (!incomingEdges.has(node.id) && !outgoingEdges.has(node.id)) {
+      queue.push({ nodeId: node.id, level: 0 });
+    }
+  });
+
+  // BFSで階層決定
+  while (queue.length > 0) {
+    const { nodeId, level } = queue.shift()!;
+    
+    if (visited.has(nodeId)) continue;
+    visited.add(nodeId);
+    
+    nodeToLevel.set(nodeId, level);
+    
+    if (!levels.has(level)) {
+      levels.set(level, []);
+    }
+    levels.get(level)!.push(nodeId);
+
+    // 子ノードを次のレベルに追加
+    const outgoing = outgoingEdges.get(nodeId) || [];
+    outgoing.forEach(edge => {
+      if (!visited.has(edge.target)) {
+        queue.push({ nodeId: edge.target, level: level + 1 });
+      }
+    });
   }
 
-  const positioned = new Set<string>();
+  // 処理されていないノードを最下位レベルに配置
+  const maxLevel = Math.max(...Array.from(levels.keys()), -1) + 1;
+  nodes.forEach(node => {
+    if (!visited.has(node.id)) {
+      if (!levels.has(maxLevel)) {
+        levels.set(maxLevel, []);
+      }
+      levels.get(maxLevel)!.push(node.id);
+      nodeToLevel.set(node.id, maxLevel);
+    }
+  });
+
+  console.log('Levels created:', levels.size);
+  levels.forEach((nodeIds, level) => {
+    console.log(`Level ${level}: ${nodeIds.length} nodes`);
+  });
+
+  // グリッドベース配置
   const newNodes = [...nodes];
-  const levelYOffsets = new Map<number, number>(); // 各レベルでのY座標追跡
+  const occupiedPositions = new Set<string>();
 
-  // 初期レベル設定
-  for (let i = 0; i < 10; i++) {
-    levelYOffsets.set(i, 0);
-  }
-
-  // 複数のルートノードがある場合の処理
-  rootNodes.forEach((rootNode, rootIndex) => {
-    const queue: Array<{ nodeId: string; level: number }> = [
-      { nodeId: rootNode.id, level: 0 }
-    ];
-
-    while (queue.length > 0) {
-      const { nodeId, level } = queue.shift()!;
+  // 各レベルのノードを配置
+  levels.forEach((nodeIds, level) => {
+    const x = level * HORIZONTAL_SPACING + 100; // 左端マージン
+    
+    // 各レベル内でのY座標を均等配置
+    nodeIds.forEach((nodeId, indexInLevel) => {
+      let y = indexInLevel * VERTICAL_SPACING + 100;
       
-      if (positioned.has(nodeId)) continue;
-      positioned.add(nodeId);
-
-      // 現在のレベルでのY座標を取得・更新
-      const currentY = levelYOffsets.get(level) || 0;
-      levelYOffsets.set(level, currentY + VERTICAL_SPACING);
-
+      // 重複チェック & 位置調整
+      let positionKey = `${x}-${y}`;
+      let attempts = 0;
+      while (occupiedPositions.has(positionKey) && attempts < 50) {
+        y += VERTICAL_SPACING / 2; // 半分の間隔で調整
+        positionKey = `${x}-${y}`;
+        attempts++;
+      }
+      
+      occupiedPositions.add(positionKey);
+      
       const nodeIndex = newNodes.findIndex(n => n.id === nodeId);
       if (nodeIndex >= 0) {
         newNodes[nodeIndex] = {
           ...newNodes[nodeIndex],
-          position: {
-            x: level * HORIZONTAL_SPACING + 50, // 左端マージン追加
-            y: currentY + (rootIndex * VERTICAL_SPACING * 0.5), // ルート間の調整
-          },
+          position: { x, y },
         };
+        console.log(`Positioned node ${nodeId} at (${x}, ${y}) - Level ${level}, Index ${indexInLevel}`);
       }
-
-      // 子ノードをキューに追加（幅優先探索）
-      const outgoing = outgoingEdges.get(nodeId) || [];
-      outgoing.forEach(edge => {
-        if (!positioned.has(edge.target)) {
-          queue.push({
-            nodeId: edge.target,
-            level: level + 1,
-          });
-        }
-      });
-    }
+    });
   });
 
-  // 配置されていないノード（孤立ノード）の処理
-  const unpositioned = newNodes.filter(node => !positioned.has(node.id));
-  unpositioned.forEach((node, index) => {
-    const nodeIndex = newNodes.findIndex(n => n.id === node.id);
-    if (nodeIndex >= 0) {
-      newNodes[nodeIndex] = {
-        ...newNodes[nodeIndex],
-        position: {
-          x: 50,
-          y: 1000 + (index * VERTICAL_SPACING), // 下部に配置
-        },
-      };
-    }
-  });
+  console.log('=== Auto Layout Algorithm Complete ===');
+  console.log('Output nodes:', newNodes.length);
+  console.log('Occupied positions:', occupiedPositions.size);
 
   return newNodes;
 };
