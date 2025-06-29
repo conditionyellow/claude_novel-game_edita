@@ -20,6 +20,7 @@ interface EditorStore extends EditorState {
   createNewProject: () => void;
   loadProject: (project: NovelProject) => void;
   updateProject: (updates: Partial<NovelProject>) => void;
+  updateProjectTitle: (title: string) => void;
   saveProject: () => void;
   
   // Paragraph actions
@@ -87,6 +88,23 @@ export const useEditorStore = create<EditorStore>()(
             currentProject: {
               ...currentProject,
               ...updates,
+              metadata: {
+                ...currentProject.metadata,
+                modified: new Date(),
+              },
+            },
+            isModified: true,
+          });
+        },
+
+        updateProjectTitle: (title: string) => {
+          const { currentProject } = get();
+          if (!currentProject) return;
+
+          set({
+            currentProject: {
+              ...currentProject,
+              title: title.trim(),
               metadata: {
                 ...currentProject.metadata,
                 modified: new Date(),

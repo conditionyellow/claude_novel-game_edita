@@ -385,7 +385,8 @@ Game.prototype.initSaveLoad = function() {
     });
 
     // セーブデータが存在する場合は「続きから」ボタンを表示
-    if (localStorage.getItem('novelsave')) {
+    var saveKey = 'novelsave_' + this.engine.project.title.replace(/[^a-zA-Z0-9\u3042-\u3096\u30A0-\u30FC\u4E00-\u9FAF]/g, '_');
+    if (localStorage.getItem(saveKey) || localStorage.getItem('novelsave')) {
         document.getElementById('load-button').style.display = 'block';
     }
 };
@@ -539,16 +540,44 @@ Game.prototype.updateChoices = function(choices) {
 
 Game.prototype.saveGame = function() {
     var saveData = this.engine.createSaveData();
-    localStorage.setItem('novelsave', JSON.stringify(saveData));
-    alert('ゲームをセーブしました');
+    // プロジェクトタイトルベースのセーブキーを生成
+    var saveKey = 'novelsave_' + this.engine.project.title.replace(/[^a-zA-Z0-9\u3042-\u3096\u30A0-\u30FC\u4E00-\u9FAF]/g, '_');
+    // セーブデータにプロジェクト情報を追加
+    var extendedSaveData = {
+        ...saveData,
+        projectTitle: this.engine.project.title,
+        projectId: this.engine.project.id
+    };
+    localStorage.setItem(saveKey, JSON.stringify(extendedSaveData));
+    alert('「' + this.engine.project.title + '」のセーブが完了しました');
     this.hideMenu();
 };
 
 Game.prototype.loadGame = function() {
     try {
-        var saveDataStr = localStorage.getItem('novelsave');
+        // プロジェクトタイトルベースのセーブキーを生成
+        var saveKey = 'novelsave_' + this.engine.project.title.replace(/[^a-zA-Z0-9\u3042-\u3096\u30A0-\u30FC\u4E00-\u9FAF]/g, '_');
+        var saveDataStr = localStorage.getItem(saveKey);
+        
+        // 新形式のセーブデータが見つからない場合、旧形式も確認
         if (!saveDataStr) {
-            alert('セーブデータが見つかりません');
+            saveDataStr = localStorage.getItem('novelsave');
+            if (saveDataStr) {
+                // 旧形式から新形式に移行
+                var oldSaveData = JSON.parse(saveDataStr);
+                var newSaveData = {
+                    ...oldSaveData,
+                    projectTitle: this.engine.project.title,
+                    projectId: this.engine.project.id
+                };
+                localStorage.setItem(saveKey, JSON.stringify(newSaveData));
+                localStorage.removeItem('novelsave'); // 旧データを削除
+                saveDataStr = JSON.stringify(newSaveData);
+            }
+        }
+        
+        if (!saveDataStr) {
+            alert('「' + this.engine.project.title + '」のセーブデータが見つかりません');
             return;
         }
 
@@ -557,6 +586,7 @@ Game.prototype.loadGame = function() {
         this.showGameScreen();
         this.updateGameUI();
         this.hideMenu();
+        alert('「' + this.engine.project.title + '」のセーブデータを読み込みました');
     } catch (error) {
         console.error('ロードエラー:', error);
         alert('セーブデータの読み込みに失敗しました');
@@ -994,7 +1024,12 @@ body {
     justify-content: center;
     width: 100%;
     height: 100%;
+    min-height: 100vh;
     background: #000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
 }
 
 .loading-spinner {
@@ -1019,13 +1054,25 @@ body {
     justify-content: center;
     width: 100%;
     height: 100%;
+    min-height: 100vh;
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
 }
 
 .title-content {
     text-align: center;
     max-width: 600px;
     padding: 40px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .game-title {
@@ -1050,7 +1097,9 @@ body {
     font-weight: bold;
     border-radius: 25px;
     cursor: pointer;
-    margin: 10px;
+    margin: 10px auto;
+    display: block;
+    min-width: 200px;
     transition: all 0.3s ease;
 }
 
@@ -1073,7 +1122,7 @@ body {
     width: 100%;
     height: 100%;
     background-size: contain;
-    background-position: center;
+    background-position: center top;
     background-repeat: no-repeat;
     background-color: #1a1a1a;
     z-index: 1;
@@ -1186,13 +1235,25 @@ body {
     justify-content: center;
     width: 100%;
     height: 100%;
+    min-height: 100vh;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
 }
 
 .end-content {
     text-align: center;
     max-width: 500px;
     padding: 40px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .end-content h2 {
@@ -1209,7 +1270,9 @@ body {
     font-weight: bold;
     border-radius: 20px;
     cursor: pointer;
-    margin: 10px;
+    margin: 10px auto;
+    display: inline-block;
+    min-width: 150px;
     transition: all 0.3s ease;
 }
 
@@ -1265,12 +1328,39 @@ body {
 
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
+    .title-content {
+        padding: 30px;
+        max-width: 80%;
+    }
+    
     .game-title {
         font-size: 2rem;
     }
     
     .game-description {
         font-size: 1rem;
+    }
+    
+    .start-btn, .load-btn {
+        padding: 14px 35px;
+        font-size: 1.1rem;
+        min-width: 180px;
+    }
+    
+    .end-content {
+        padding: 30px;
+        max-width: 80%;
+    }
+    
+    .restart-btn, .title-btn {
+        padding: 12px 25px;
+        font-size: 0.95rem;
+        min-width: 140px;
+    }
+    
+    #background-container {
+        background-position: center top;
+        background-size: contain;
     }
     
     .game-ui {
@@ -1300,25 +1390,97 @@ body {
 @media (max-width: 480px) {
     .title-content {
         padding: 20px;
+        max-width: 90%;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
     }
     
     .game-title {
-        font-size: 1.5rem;
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+    }
+    
+    .game-description {
+        font-size: 0.9rem;
+        margin-bottom: 2rem;
     }
     
     .start-btn, .load-btn {
-        padding: 12px 30px;
-        font-size: 1rem;
+        padding: 14px 32px;
+        font-size: 1.1rem;
+        width: 100%;
+        max-width: 300px;
+        margin: 0.5rem auto;
+        display: block;
+    }
+    
+    #background-container {
+        background-position: center top;
+        background-size: contain;
     }
     
     .game-ui {
-        padding: 8px;
+        padding: 10px;
         max-height: 50vh;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     #text-area {
-        padding: 12px;
+        padding: 10px;
         min-height: 60px;
+        margin-bottom: 8px;
+    }
+    
+    #choices-area {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .choice-btn {
+        width: 100%;
+        padding: 14px 16px;
+        margin: 8px 0;
+        font-size: 0.9rem;
+        text-align: left;
+        box-sizing: border-box;
+        border-radius: 8px;
+        word-wrap: break-word;
+        white-space: normal;
+        line-height: 1.4;
+        min-height: 48px;
+    }
+    
+    .choice-btn:hover {
+        transform: none;
+    }
+    
+    .end-content {
+        padding: 20px;
+        max-width: 90%;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .end-content h2 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .restart-btn, .title-btn {
+        padding: 12px 24px;
+        font-size: 0.9rem;
+        margin: 6px auto;
+        display: inline-block;
+        width: auto;
+        min-width: 120px;
     }
 }`;
   }

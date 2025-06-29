@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
-import { Button, Tooltip } from '../UI';
-import { FileText, GitBranch, Eye, Save, FolderOpen, Plus, Image, Download } from 'lucide-react';
+import { Button, Tooltip, Input } from '../UI';
+import { FileText, GitBranch, Eye, Save, FolderOpen, Plus, Image, Download, Edit3 } from 'lucide-react';
 import { NovelProject } from '../../types';
 
 export const Toolbar: React.FC = () => {
@@ -13,10 +13,13 @@ export const Toolbar: React.FC = () => {
     saveProject,
     addParagraph,
     loadProject,
-    buildGame
+    buildGame,
+    updateProjectTitle
   } = useEditorStore();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editingTitle, setEditingTitle] = useState('');
 
   const handleModeChange = (newMode: 'editor' | 'flow' | 'preview' | 'assets') => {
     setMode(newMode);
@@ -81,6 +84,34 @@ export const Toolbar: React.FC = () => {
     reader.readAsText(file);
     // ファイル入力をリセット（同じファイルを再選択可能にする）
     event.target.value = '';
+  };
+
+  const handleTitleEdit = () => {
+    if (!currentProject) return;
+    setEditingTitle(currentProject.title);
+    setIsEditingTitle(true);
+  };
+
+  const handleTitleSave = () => {
+    if (!editingTitle.trim()) {
+      alert('タイトルは空にできません。');
+      return;
+    }
+    updateProjectTitle(editingTitle);
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleCancel = () => {
+    setIsEditingTitle(false);
+    setEditingTitle('');
+  };
+
+  const handleTitleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      handleTitleCancel();
+    }
   };
 
   return (
@@ -202,9 +233,55 @@ export const Toolbar: React.FC = () => {
                   : 'bg-green-400'
                 : 'bg-gray-400'
             }`} />
-            <span className="text-gray-700 dark:text-gray-300 font-medium hidden sm:inline">
-              {currentProject?.title || 'プロジェクトなし'}
-            </span>
+            
+            {/* タイトル表示・編集エリア */}
+            {isEditingTitle && currentProject ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onKeyDown={handleTitleKeyPress}
+                  className="h-6 text-sm min-w-[200px]"
+                  placeholder="プロジェクトタイトル"
+                  autoFocus
+                />
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={handleTitleSave}
+                  className="h-6 px-2 text-xs"
+                >
+                  保存
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={handleTitleCancel}
+                  className="h-6 px-2 text-xs"
+                >
+                  キャンセル
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group">
+                <span className="text-gray-700 dark:text-gray-300 font-medium hidden sm:inline">
+                  {currentProject?.title || 'プロジェクトなし'}
+                </span>
+                {currentProject && (
+                  <Tooltip content="タイトルを編集" position="bottom">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleTitleEdit}
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
+            )}
+            
             {isModified && (
               <span className="text-amber-600 dark:text-amber-400 text-xs hidden sm:inline">
                 未保存
