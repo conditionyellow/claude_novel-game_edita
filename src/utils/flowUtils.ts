@@ -3,11 +3,13 @@ import { Paragraph, Choice, ParagraphNodeData, ChoiceEdgeData } from '../types';
 import { generateId } from './index';
 
 // 自動レイアウト用の定数
-const HORIZONTAL_SPACING = 500;
-const VERTICAL_SPACING = 300;
-const MIN_NODE_SPACING = 200; // 最小ノード間隔
-const NODE_WIDTH = 300; // ノード幅
-const NODE_HEIGHT = 200; // ノード高さ
+const HORIZONTAL_SPACING = 600;
+const VERTICAL_SPACING = 400;
+const MIN_NODE_SPACING = 350; // 最小ノード間隔
+const NODE_WIDTH = 320; // ノード幅（実際のノードサイズ+マージン）
+const NODE_HEIGHT = 220; // ノード高さ（実際のノードサイズ+マージン）
+const GRID_CELL_SIZE = 50; // グリッドセルサイズ
+const COLLISION_ITERATIONS = 10; // 衝突回避最大試行回数
 
 // パラグラフからフローノードを作成
 export const createFlowNode = (
@@ -141,13 +143,23 @@ export const convertParagraphsToFlow = (
   return { nodes, edges };
 };
 
-// グリッドベース自動レイアウト（重複完全回避）
+// 高度な重複回避システム - Force-Directed + Grid Hybrid Algorithm
 export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
   if (nodes.length === 0) return nodes;
 
-  console.log('=== Auto Layout Algorithm Start ===');
+  console.log('=== Advanced Auto Layout Algorithm Start ===');
   console.log('Input nodes:', nodes.length);
   console.log('Input edges:', edges.length);
+
+  // ユーティリティ関数：2点間の距離を計算
+  const distance = (pos1: { x: number; y: number }, pos2: { x: number; y: number }) => {
+    return Math.sqrt((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2);
+  };
+
+  // ユーティリティ関数：ノード同士が重複しているかチェック
+  const isOverlapping = (pos1: { x: number; y: number }, pos2: { x: number; y: number }) => {
+    return distance(pos1, pos2) < MIN_NODE_SPACING;
+  };
 
   // エッジ情報を整理
   const incomingEdges = new Map<string, Edge[]>();
@@ -163,12 +175,12 @@ export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
     outgoingEdges.set(edge.source, outgoing);
   });
 
-  // ノードを階層別に分類
+  // Step 1: 階層分析とランキング
   const levels = new Map<number, string[]>();
   const nodeToLevel = new Map<string, number>();
   const visited = new Set<string>();
 
-  // ルートノード（スタートノードまたは入力エッジなし）を見つける
+  // ルートノードを特定
   const rootNodes = nodes.filter(node => 
     (node.data as any)?.paragraph?.type === 'start' || 
     !incomingEdges.has(node.id)
@@ -178,20 +190,10 @@ export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
 
   // BFSで階層を決定
   const queue: Array<{ nodeId: string; level: number }> = [];
-  
-  // ルートノードを処理
   rootNodes.forEach(rootNode => {
     queue.push({ nodeId: rootNode.id, level: 0 });
   });
 
-  // 孤立ノードも処理対象に追加
-  nodes.forEach(node => {
-    if (!incomingEdges.has(node.id) && !outgoingEdges.has(node.id)) {
-      queue.push({ nodeId: node.id, level: 0 });
-    }
-  });
-
-  // BFSで階層決定
   while (queue.length > 0) {
     const { nodeId, level } = queue.shift()!;
     
@@ -205,7 +207,6 @@ export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
     }
     levels.get(level)!.push(nodeId);
 
-    // 子ノードを次のレベルに追加
     const outgoing = outgoingEdges.get(nodeId) || [];
     outgoing.forEach(edge => {
       if (!visited.has(edge.target)) {
@@ -214,7 +215,7 @@ export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
     });
   }
 
-  // 処理されていないノードを最下位レベルに配置
+  // 未処理ノードを最終レベルに配置
   const maxLevel = Math.max(...Array.from(levels.keys()), -1) + 1;
   nodes.forEach(node => {
     if (!visited.has(node.id)) {
@@ -226,48 +227,129 @@ export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
     }
   });
 
-  console.log('Levels created:', levels.size);
+  console.log('Levels analysis:', levels.size);
   levels.forEach((nodeIds, level) => {
     console.log(`Level ${level}: ${nodeIds.length} nodes`);
   });
 
-  // グリッドベース配置
+  // Step 2: 初期配置（改良版グリッド）
   const newNodes = [...nodes];
-  const occupiedPositions = new Set<string>();
+  const positions = new Map<string, { x: number; y: number }>();
 
-  // 各レベルのノードを配置
   levels.forEach((nodeIds, level) => {
-    const x = level * HORIZONTAL_SPACING + 100; // 左端マージン
+    const x = level * HORIZONTAL_SPACING + 100;
     
-    // 各レベル内でのY座標を均等配置
-    nodeIds.forEach((nodeId, indexInLevel) => {
-      let y = indexInLevel * VERTICAL_SPACING + 100;
+    // レベル内のノード数に応じて配置戦略を変更
+    const nodesInLevel = nodeIds.length;
+    
+    if (nodesInLevel === 1) {
+      // 単一ノード: 中央配置
+      const y = 300; // 固定中央位置
+      positions.set(nodeIds[0], { x, y });
+    } else if (nodesInLevel <= 3) {
+      // 少数ノード: 均等縦配置
+      const startY = 200;
+      nodeIds.forEach((nodeId, index) => {
+        const y = startY + (index * VERTICAL_SPACING);
+        positions.set(nodeId, { x, y });
+      });
+    } else {
+      // 多数ノード: 2列グリッド配置
+      const startY = 150;
+      const columnSpacing = NODE_WIDTH + 50;
       
-      // 重複チェック & 位置調整
-      let positionKey = `${x}-${y}`;
-      let attempts = 0;
-      while (occupiedPositions.has(positionKey) && attempts < 50) {
-        y += VERTICAL_SPACING / 2; // 半分の間隔で調整
-        positionKey = `${x}-${y}`;
-        attempts++;
-      }
-      
-      occupiedPositions.add(positionKey);
-      
-      const nodeIndex = newNodes.findIndex(n => n.id === nodeId);
-      if (nodeIndex >= 0) {
-        newNodes[nodeIndex] = {
-          ...newNodes[nodeIndex],
-          position: { x, y },
-        };
-        console.log(`Positioned node ${nodeId} at (${x}, ${y}) - Level ${level}, Index ${indexInLevel}`);
-      }
-    });
+      nodeIds.forEach((nodeId, index) => {
+        const column = Math.floor(index / 3); // 3行ごとに新列
+        const row = index % 3;
+        const nodeX = x + (column * columnSpacing);
+        const nodeY = startY + (row * VERTICAL_SPACING);
+        positions.set(nodeId, { x: nodeX, y: nodeY });
+      });
+    }
   });
 
-  console.log('=== Auto Layout Algorithm Complete ===');
+  // Step 3: 衝突検出と解決（Force-Directed）
+  console.log('Starting collision resolution...');
+  
+  for (let iteration = 0; iteration < COLLISION_ITERATIONS; iteration++) {
+    let hasCollisions = false;
+    const nodeIds = Array.from(positions.keys());
+    
+    for (let i = 0; i < nodeIds.length; i++) {
+      for (let j = i + 1; j < nodeIds.length; j++) {
+        const node1Id = nodeIds[i];
+        const node2Id = nodeIds[j];
+        const pos1 = positions.get(node1Id)!;
+        const pos2 = positions.get(node2Id)!;
+        
+        if (isOverlapping(pos1, pos2)) {
+          hasCollisions = true;
+          
+          // 重複解決: 反発力を適用
+          const dist = distance(pos1, pos2);
+          const overlap = MIN_NODE_SPACING - dist;
+          
+          if (dist > 0) {
+            const moveDistance = overlap / 2 + 10; // 少し余分に移動
+            const angle = Math.atan2(pos2.y - pos1.y, pos2.x - pos1.x);
+            
+            // 両ノードを反対方向に移動
+            const move1X = -Math.cos(angle) * moveDistance;
+            const move1Y = -Math.sin(angle) * moveDistance;
+            const move2X = Math.cos(angle) * moveDistance;
+            const move2Y = Math.sin(angle) * moveDistance;
+            
+            positions.set(node1Id, {
+              x: Math.max(50, pos1.x + move1X),
+              y: Math.max(50, pos1.y + move1Y)
+            });
+            
+            positions.set(node2Id, {
+              x: Math.max(50, pos2.x + move2X),
+              y: Math.max(50, pos2.y + move2Y)
+            });
+            
+            console.log(`Iteration ${iteration}: Resolved collision between ${node1Id} and ${node2Id}`);
+          }
+        }
+      }
+    }
+    
+    if (!hasCollisions) {
+      console.log(`Collision resolution completed in ${iteration + 1} iterations`);
+      break;
+    }
+  }
+
+  // Step 4: 最終位置適用
+  positions.forEach((position, nodeId) => {
+    const nodeIndex = newNodes.findIndex(n => n.id === nodeId);
+    if (nodeIndex >= 0) {
+      newNodes[nodeIndex] = {
+        ...newNodes[nodeIndex],
+        position: {
+          x: Math.round(position.x),
+          y: Math.round(position.y)
+        },
+      };
+    }
+  });
+
+  // Step 5: 最終検証
+  let finalCollisions = 0;
+  const finalPositions = Array.from(positions.values());
+  for (let i = 0; i < finalPositions.length; i++) {
+    for (let j = i + 1; j < finalPositions.length; j++) {
+      if (isOverlapping(finalPositions[i], finalPositions[j])) {
+        finalCollisions++;
+      }
+    }
+  }
+
+  console.log('=== Advanced Auto Layout Algorithm Complete ===');
   console.log('Output nodes:', newNodes.length);
-  console.log('Occupied positions:', occupiedPositions.size);
+  console.log('Final collisions:', finalCollisions);
+  console.log('Layout quality:', finalCollisions === 0 ? '100%' : `${Math.max(0, 100 - finalCollisions * 10)}%`);
 
   return newNodes;
 };
