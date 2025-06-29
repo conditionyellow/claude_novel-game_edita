@@ -204,7 +204,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
       ) : (
         <div className={
           viewMode === 'grid' 
-            ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4'
+            ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
             : 'space-y-2'
         }>
           {filteredAssets.map((asset) => (
@@ -213,7 +213,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
               className={`
                 group relative border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer
                 ${selectedAssetIds.includes(asset.id) ? 'ring-2 ring-blue-500' : 'border-gray-200'}
-                ${viewMode === 'grid' ? 'aspect-square' : 'p-4'}
+                ${viewMode === 'grid' ? 'bg-white' : 'p-4'}
               `}
               onClick={() => {
                 // アセット直接クリックでプレビューモーダルを開く
@@ -226,12 +226,13 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 // グリッドビュー
                 <>
                   {/* プレビュー */}
-                  <div className="w-full h-32 bg-gray-100 flex items-center justify-center">
+                  <div className="w-full max-w-[300px] bg-gray-100 flex items-center justify-center overflow-hidden mx-auto">
                     {asset.type === 'image' ? (
                       <img 
                         src={asset.url} 
                         alt={asset.name}
-                        className="w-full h-full object-cover"
+                        className="max-w-[300px] w-full h-auto object-contain hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
                       />
                     ) : (
                       <Volume2 className="w-8 h-8 text-gray-400" />
@@ -240,12 +241,12 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
                   {/* 情報 */}
                   <div className="p-3">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(asset.category)}`}>
                         {getCategoryLabel(asset.category)}
                       </span>
                     </div>
-                    <h3 className="font-medium text-sm text-gray-900 truncate" title={asset.name}>
+                    <h3 className="font-medium text-sm text-gray-900 truncate mb-0.5" title={asset.name}>
                       {asset.name}
                     </h3>
                     <p className="text-xs text-gray-500">{formatFileSize(asset.metadata.size)}</p>
@@ -282,27 +283,36 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 // リストビュー
                 <div className="flex items-center gap-4">
                   {/* サムネイル */}
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div 
+                    className="w-[200px] h-[150px] bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors border-2 border-blue-500 hover:border-blue-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('画像クリック:', asset.name);
+                      setPreviewAsset(asset);
+                    }}
+                    title="クリックして大きなプレビューを表示"
+                  >
                     {asset.type === 'image' ? (
                       <img 
                         src={asset.url} 
                         alt={asset.name}
-                        className="w-full h-full object-cover rounded-lg"
+                        className="w-full h-full object-cover rounded-lg shadow-sm"
+                        loading="lazy"
                       />
                     ) : (
-                      <Volume2 className="w-6 h-6 text-gray-400" />
+                      <Volume2 className="w-16 h-16 text-gray-400" />
                     )}
                   </div>
 
                   {/* 情報 */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-0.5">
                       <h3 className="font-medium text-gray-900 truncate">{asset.name}</h3>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(asset.category)}`}>
                         {getCategoryLabel(asset.category)}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500 space-y-1">
+                    <div className="text-sm text-gray-500 space-y-0.5">
                       <p>{formatFileSize(asset.metadata.size)} • {formatDate(asset.metadata.uploadedAt)}</p>
                       {asset.metadata.dimensions && (
                         <p>{asset.metadata.dimensions.width} × {asset.metadata.dimensions.height}</p>
@@ -312,16 +322,6 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
                   {/* アクション */}
                   <div className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewAsset(asset);
-                      }}
-                    >
-                      プレビュー
-                    </Button>
                     {mode === 'manage' && onAssetDelete && (
                       <Button
                         variant="secondary"

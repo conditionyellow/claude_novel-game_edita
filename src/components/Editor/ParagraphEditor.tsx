@@ -387,12 +387,20 @@ export const ParagraphEditor: React.FC = () => {
             
             {selectedParagraph.content.background ? (
               <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start space-x-4">
-                  <img
-                    src={selectedParagraph.content.background.url}
-                    alt={selectedParagraph.content.background.name}
-                    className="w-24 h-16 object-cover rounded border"
-                  />
+                {/* 画像プレビュー */}
+                <div className="mb-4">
+                  <div className="relative max-w-full">
+                    <img
+                      src={selectedParagraph.content.background.url}
+                      alt={selectedParagraph.content.background.name}
+                      className="w-full h-auto max-h-64 object-contain rounded border bg-gray-50"
+                      style={{ maxWidth: '100%' }}
+                    />
+                  </div>
+                </div>
+                
+                {/* メタデータと削除ボタン */}
+                <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {selectedParagraph.content.background.name}

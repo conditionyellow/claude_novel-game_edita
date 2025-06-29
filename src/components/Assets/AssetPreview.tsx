@@ -20,6 +20,10 @@ export const AssetPreview: React.FC<AssetPreviewProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  
+  // 画像最適化フック（プレビューモーダルでは使用しない）
+  const [imageLoading, setImageLoading] = useState(true);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -150,7 +154,7 @@ export const AssetPreview: React.FC<AssetPreviewProps> = ({
         justifyContent: 'center'
       }}
     >
-      <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
+      <div className="bg-white rounded-lg max-w-7xl max-h-[95vh] w-full overflow-hidden shadow-2xl">
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-4">
@@ -174,22 +178,36 @@ export const AssetPreview: React.FC<AssetPreviewProps> = ({
           </div>
         </div>
 
-        <div className="flex">
+        <div className="flex flex-col lg:flex-row max-h-[calc(95vh-120px)] overflow-hidden">
           {/* メインコンテンツ */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-6 flex items-center justify-center min-h-0">
             {asset.type === 'image' ? (
               // 画像プレビュー
-              <div className="text-center">
-                <img
-                  src={asset.url}
-                  alt={asset.name}
-                  className="max-w-full max-h-96 mx-auto rounded-lg shadow-lg object-contain"
-                />
-                {asset.metadata.dimensions && (
-                  <p className="mt-4 text-sm text-gray-500">
-                    {asset.metadata.dimensions.width} × {asset.metadata.dimensions.height} ピクセル
-                  </p>
-                )}
+              <div className="w-full h-full flex items-center justify-center">
+                <div 
+                  ref={imageContainerRef}
+                  className="relative flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden"
+                  style={{ 
+                    width: '85vw', 
+                    height: '70vh',
+                    maxWidth: '1000px',
+                    maxHeight: '700px'
+                  }}
+                >
+                  <img
+                    src={asset.url}
+                    alt={asset.name}
+                    className="rounded-lg shadow-lg transition-opacity duration-300"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain'
+                    }}
+                    onLoad={() => setImageLoading(false)}
+                    onError={() => setImageLoading(false)}
+                    loading="lazy"
+                  />
+                </div>
               </div>
             ) : (
               // 音声プレビュー
@@ -263,36 +281,36 @@ export const AssetPreview: React.FC<AssetPreviewProps> = ({
           </div>
 
           {/* サイドバー - 詳細情報 */}
-          <div className="w-80 bg-gray-50 p-6 border-l border-gray-200">
+          <div className="w-80 bg-gray-50 p-6 border-l border-gray-200 hidden lg:block">
             <div className="flex items-center gap-2 mb-4">
               <Info className="w-5 h-5 text-gray-600" />
               <h3 className="font-medium text-gray-900">詳細情報</h3>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ファイル名</label>
+                <label className="block text-sm font-medium text-gray-700 mb-0.5">ファイル名</label>
                 <p className="text-sm text-gray-900 break-all">{asset.name}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">カテゴリ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-0.5">カテゴリ</label>
                 <p className="text-sm text-gray-900">{getCategoryLabel(asset.category)}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ファイルサイズ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-0.5">ファイルサイズ</label>
                 <p className="text-sm text-gray-900">{formatFileSize(asset.metadata.size)}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">形式</label>
+                <label className="block text-sm font-medium text-gray-700 mb-0.5">形式</label>
                 <p className="text-sm text-gray-900">{asset.metadata.format}</p>
               </div>
 
               {asset.metadata.dimensions && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">解像度</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-0.5">解像度</label>
                   <p className="text-sm text-gray-900">
                     {asset.metadata.dimensions.width} × {asset.metadata.dimensions.height}
                   </p>
@@ -301,25 +319,25 @@ export const AssetPreview: React.FC<AssetPreviewProps> = ({
 
               {asset.metadata.duration !== undefined && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">再生時間</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-0.5">再生時間</label>
                   <p className="text-sm text-gray-900">{formatTime(asset.metadata.duration)}</p>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">アップロード日時</label>
+                <label className="block text-sm font-medium text-gray-700 mb-0.5">アップロード日時</label>
                 <p className="text-sm text-gray-900">{formatDate(asset.metadata.uploadedAt)}</p>
               </div>
 
               {asset.metadata.lastUsed && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">最終使用日時</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-0.5">最終使用日時</label>
                   <p className="text-sm text-gray-900">{formatDate(asset.metadata.lastUsed)}</p>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ID</label>
+                <label className="block text-sm font-medium text-gray-700 mb-0.5">ID</label>
                 <p className="text-xs text-gray-500 font-mono break-all">{asset.id}</p>
               </div>
             </div>
