@@ -33,6 +33,10 @@ class CDNAssetStorage implements AssetStorage {
   async getStorageInfo(): Promise<{ used: number; total: number; available: number }> {
     throw new Error('CDN storage not implemented yet');
   }
+
+  async getAssetBlob(assetId: string): Promise<Blob | null> {
+    throw new Error('CDN storage not implemented yet');
+  }
 }
 
 /**
@@ -172,6 +176,18 @@ export class AssetStorageManager {
     } catch (error) {
       console.error('Failed to get storage info:', error);
       return { used: 0, total: 0, available: 0 };
+    }
+  }
+
+  /**
+   * アセットBlobを取得（ビルド用）
+   */
+  async getAssetBlob(assetId: string): Promise<Blob | null> {
+    try {
+      return await this.storage.getAssetBlob(assetId);
+    } catch (error) {
+      console.error('Failed to get asset blob:', error);
+      return null;
     }
   }
   

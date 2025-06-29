@@ -2,15 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Modern Design System Variables */
 :root {
-  font-family: 'Noto Sans JP', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  /* Typography */
+  --font-sans: 'Inter', 'Noto Sans JP', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  
+  /* Color Palette - Light Mode */
+  --color-white: #ffffff;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  /* Brand Colors */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  
+  /* Semantic Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  
+  /* Surface Colors */
+  --color-surface-1: var(--color-white);
+  --color-surface-2: var(--color-gray-50);
+  --color-surface-3: var(--color-gray-100);
+  
+  /* Border & Divider */
+  --color-border-light: var(--color-gray-200);
+  --color-border-medium: var(--color-gray-300);
+  --color-border-heavy: var(--color-gray-400);
+  
+  /* Shadows */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  
+  /* Spacing Scale */
+  --space-px: 1px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  
+  /* Typography Scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  
+  /* Base Settings */
+  font-family: var(--font-sans);
+  line-height: 1.6;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color: var(--color-gray-900);
+  background-color: var(--color-surface-1);
+  
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -74,43 +152,51 @@ button:focus-visible {
   }
 }
 
-/* Editor specific styles */
+/* Modern Editor Layout */
 .editor-container {
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--color-surface-1);
+  color: var(--color-gray-900);
 }
 
 .editor-main {
   flex: 1;
   display: flex;
-  min-height: 0; /* フレックス子要素のオーバーフロー対応 */
+  min-height: 0;
+  background-color: var(--color-surface-2);
 }
 
 .editor-sidebar {
-  width: 300px;
-  background-color: #f8f9fa;
-  border-right: 1px solid #e9ecef;
+  width: 320px;
+  background-color: var(--color-surface-1);
+  border-right: 1px solid var(--color-border-light);
   overflow-y: auto;
+  box-shadow: var(--shadow-sm);
+  z-index: 10;
 }
 
 .editor-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* 縦方向のスクロールを有効化 */
-  min-height: 0; /* フレックス子要素のオーバーフロー対応 */
+  overflow-y: auto;
+  min-height: 0;
+  background-color: var(--color-surface-2);
 }
 
 .toolbar {
-  height: 48px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e9ecef;
+  height: 56px;
+  background-color: var(--color-surface-1);
+  border-bottom: 1px solid var(--color-border-light);
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  gap: 8px;
+  padding: 0 var(--space-6);
+  gap: var(--space-3);
+  box-shadow: var(--shadow-xs);
+  z-index: 20;
 }
 
 /* Custom animations */
@@ -127,6 +213,79 @@ button:focus-visible {
   animation: pulse-slow 3s ease-in-out infinite;
 }
 
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out forwards;
+}
+
+/* Responsive Design Adjustments */
+@media (max-width: 1024px) {
+  .editor-sidebar {
+    width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .editor-container {
+    flex-direction: column;
+  }
+  
+  .editor-main {
+    flex-direction: column;
+  }
+  
+  .editor-sidebar {
+    width: 100%;
+    height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+  
+  .toolbar {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+  }
+  
+  .toolbar > div {
+    flex-wrap: wrap;
+  }
+  
+  /* タブレット用パディング調整 */
+  .paragraph-editor-container {
+    padding-left: var(--space-8) !important;
+    padding-right: var(--space-8) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .editor-sidebar {
+    height: 150px;
+  }
+  
+  .toolbar {
+    padding: var(--space-2) var(--space-3);
+  }
+  
+  /* モバイルでのパラグラフエディタのパディング調整 */
+  .paragraph-editor-container {
+    padding-left: var(--space-6) !important;
+    padding-right: var(--space-6) !important;
+  }
+}
+
 /* React Flow enhancements */
 .react-flow__edge.react-flow__edge-choice {
   transition: all 0.3s ease;
@@ -136,15 +295,56 @@ button:focus-visible {
   stroke-width: 4 !important;
 }
 
-/* Dark mode */
+/* Dark Mode Variables */
 @media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Mode Color Palette */
+    --color-gray-50: #1f2937;
+    --color-gray-100: #374151;
+    --color-gray-200: #4b5563;
+    --color-gray-300: #6b7280;
+    --color-gray-400: #9ca3af;
+    --color-gray-500: #d1d5db;
+    --color-gray-600: #e5e7eb;
+    --color-gray-700: #f3f4f6;
+    --color-gray-800: #f9fafb;
+    --color-gray-900: #ffffff;
+    
+    /* Dark Surface Colors */
+    --color-surface-1: #111827;
+    --color-surface-2: #1f2937;
+    --color-surface-3: #374151;
+    
+    /* Dark Border Colors */
+    --color-border-light: #374151;
+    --color-border-medium: #4b5563;
+    --color-border-heavy: #6b7280;
+    
+    /* Base Settings */
+    color: var(--color-gray-900);
+    background-color: var(--color-surface-1);
+  }
+  
+  .editor-container {
+    background-color: var(--color-surface-1);
+    color: var(--color-gray-900);
+  }
+  
+  .editor-main {
+    background-color: var(--color-surface-2);
+  }
+  
   .editor-sidebar {
-    background-color: #1a1a1a;
-    border-right-color: #404040;
+    background-color: var(--color-surface-1);
+    border-right-color: var(--color-border-light);
+  }
+  
+  .editor-content {
+    background-color: var(--color-surface-2);
   }
   
   .toolbar {
-    background-color: #2d2d2d;
-    border-bottom-color: #404040;
+    background-color: var(--color-surface-1);
+    border-bottom-color: var(--color-border-light);
   }
 }

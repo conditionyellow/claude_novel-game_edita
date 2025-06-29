@@ -260,4 +260,38 @@ export class IndexedDBAssetStorage implements AssetStorage {
       available: maxSize
     };
   }
+
+  /**
+   * ビルド用：アセットBlobを取得
+   */
+  async getAssetBlob(assetId: string): Promise<Blob | null> {
+    const db = await this.initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['assets', 'files'], 'readonly');
+      const assetRequest = transaction.objectStore('assets').get(assetId);
+      
+      assetRequest.onsuccess = () => {
+        const asset = assetRequest.result as AssetMetadata | undefined;
+        if (!asset) {
+          resolve(null);
+          return;
+        }
+        
+        const fileRequest = transaction.objectStore('files').get(asset.filePath);
+        fileRequest.onsuccess = () => {
+          const result = fileRequest.result;
+          if (result && result.data) {
+            resolve(result.data as Blob);
+          } else {
+            resolve(null);
+          }
+        };
+        
+        fileRequest.onerror = () => reject(fileRequest.error);
+      };
+      
+      assetRequest.onerror = () => reject(assetRequest.error);
+    });
+  }
 }

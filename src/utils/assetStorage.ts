@@ -29,6 +29,9 @@ export interface AssetStorage {
     total: number;
     available: number;
   }>;
+  
+  // ビルド用：アセットBlobを取得
+  getAssetBlob(assetId: string): Promise<Blob | null>;
 }
 
 /**

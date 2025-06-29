@@ -10,14 +10,6 @@ import { AssetManager } from '../Assets';
 
 export const EditorLayout: React.FC = () => {
   const { mode, currentProject, createNewProject, addAsset, addAssetWithFile, deleteAsset } = useEditorStore();
-  
-  console.log('=================== EditorLayout Render ===================');
-  console.log('EditorLayout - Current mode:', mode);
-  console.log('EditorLayout - Current project exists:', !!currentProject);
-  console.log('EditorLayout - Current project:', currentProject);
-  if (currentProject) {
-    console.log('EditorLayout - Project paragraphs:', currentProject.paragraphs.length);
-  }
 
   useEffect(() => {
     // 初回起動時に新しいプロジェクトを作成
@@ -38,63 +30,36 @@ export const EditorLayout: React.FC = () => {
   };
 
   const renderMainContent = () => {
-    // 画面に直接情報を表示
-    const debugOverlay = (
-      <div style={{
-        position: 'absolute',
-        top: '10px',
-        right: '10px',
-        background: 'orange',
-        color: 'black',
-        padding: '10px',
-        border: '2px solid red',
-        zIndex: 9999,
-        fontSize: '12px'
-      }}>
-        <div>EditorLayout Debug:</div>
-        <div>Mode: {mode}</div>
-        <div>Project: {currentProject ? 'Loaded' : 'Not Loaded'}</div>
-        <div>Project ID: {currentProject?.id || 'None'}</div>
-      </div>
-    );
-    
     switch (mode) {
       case 'flow':
-        console.log('EditorLayout - Rendering FLOW mode');
         try {
           return (
-            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-              {debugOverlay}
-              <div style={{ background: 'lightblue', padding: '10px', fontSize: '12px', borderBottom: '2px solid darkblue' }}>
-                <strong>FLOW MODE ACTIVE</strong> - FlowEditor should render below:
-              </div>
-              <div style={{ width: '100%', height: 'calc(100% - 40px)' }}>
-                <ReactFlowProvider>
-                  <FlowEditor />
-                </ReactFlowProvider>
-              </div>
+            <div className="w-full h-full">
+              <ReactFlowProvider>
+                <FlowEditor />
+              </ReactFlowProvider>
             </div>
           );
         } catch (error) {
           console.error('EditorLayout - FlowEditor error:', error);
           return (
-            <div style={{ position: 'relative' }}>
-              {debugOverlay}
-              <div style={{ color: 'red', padding: '20px' }}>
-                <h3>FlowEditor Error:</h3>
-                <pre>{String(error)}</pre>
-                <div>Stack: {error instanceof Error ? error.stack : 'No stack'}</div>
+            <div className="flex items-center justify-center h-full bg-red-50 dark:bg-red-900/20">
+              <div className="text-center p-8 max-w-md">
+                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                  <span className="text-red-600 dark:text-red-400 text-2xl">⚠</span>
+                </div>
+                <h3 className="text-lg font-medium text-red-900 dark:text-red-100 mb-2">
+                  フローエディターエラー
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  フローエディターの読み込みに失敗しました
+                </p>
               </div>
             </div>
           );
         }
       case 'preview':
-        return (
-          <div style={{ position: 'relative' }}>
-            {debugOverlay}
-            <Preview />
-          </div>
-        );
+        return <Preview />;
       case 'assets':
         return (
           <div className="h-full">
@@ -111,12 +76,7 @@ export const EditorLayout: React.FC = () => {
           </div>
         );
       default:
-        return (
-          <div style={{ position: 'relative' }}>
-            {debugOverlay}
-            <ParagraphEditor />
-          </div>
-        );
+        return <ParagraphEditor />;
     }
   };
 

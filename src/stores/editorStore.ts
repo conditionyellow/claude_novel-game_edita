@@ -3,6 +3,7 @@ import { devtools, persist } from 'zustand/middleware';
 import { EditorState, NovelProject, Paragraph, Asset } from '../types';
 import { createEmptyProject, createEmptyParagraph } from '../utils';
 import { assetStorage } from '../utils/assetStorageManager';
+import { GameBuilder } from '../runtime/GameBuilder';
 
 // 既存のLocalStorageデータをクリア（容量問題解決のため）
 if (typeof window !== 'undefined') {
@@ -38,6 +39,9 @@ interface EditorStore extends EditorState {
   // Utility actions
   markAsModified: () => void;
   clearModified: () => void;
+  
+  // Build actions
+  buildGame: () => Promise<void>;
 }
 
 // LocalStorage永続化を無効化して容量問題を回避
@@ -408,6 +412,63 @@ export const useEditorStore = create<EditorStore>()(
 
         clearModified: () => {
           set({ isModified: false });
+        },
+
+        // ゲームビルド機能
+        buildGame: async () => {
+          const { currentProject } = get();
+          if (!currentProject) {
+            throw new Error('プロジェクトが読み込まれていません');
+          }
+
+          try {
+            // ビルドプロセス開始の通知
+            console.log('ビルド開始:', currentProject.title);
+            console.log('パラグラフ数:', currentProject.paragraphs.length);
+            console.log('アセット数:', currentProject.assets.length);
+            
+            // アセットの詳細をログ出力
+            currentProject.assets.forEach((asset, index) => {
+              console.log(`アセット ${index + 1}:`, {
+                id: asset.id,
+                name: asset.name,
+                type: asset.type,
+                category: asset.category,
+                url: asset.url ? asset.url.substring(0, 50) + '...' : 'なし',
+                hasMetadata: !!asset.metadata
+              });
+            });
+
+            alert('ゲームのビルドを開始しています...');
+
+            // GameBuilderを使用してビルド
+            const builder = new GameBuilder(currentProject);
+            const gameArchive = await builder.buildGame();
+
+            // ファイル名を生成
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+            const fileName = `${currentProject.title}_game_${timestamp}.zip`;
+
+            // ZIPファイルをダウンロード
+            const url = URL.createObjectURL(gameArchive);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+
+            // クリーンアップ
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            alert(`ゲーム "${fileName}" のビルドが完了しました！\n\nアセット数: ${currentProject.assets.length}個\nパラグラフ数: ${currentProject.paragraphs.length}個`);
+            console.log('Game built successfully:', fileName);
+          } catch (error) {
+            console.error('Build failed:', error);
+            alert(`ビルドエラー: ${error.message}`);
+            throw error;
+          }
         },
       }),
     { name: 'EditorStore' }

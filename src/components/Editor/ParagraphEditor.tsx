@@ -2,11 +2,13 @@ import React from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 import { Input, Textarea, Button } from '../UI';
 import { ChoiceEditor } from './ChoiceEditor';
-import { Plus, Image, X, Music } from 'lucide-react';
+import { Plus, Image, X, Music, ChevronDown, ChevronUp } from 'lucide-react';
 import { generateId } from '../../utils';
 import { Asset } from '../../types';
 
 export const ParagraphEditor: React.FC = () => {
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = React.useState(false);
+  
   const { 
     currentProject, 
     selectedParagraphId, 
@@ -20,16 +22,36 @@ export const ParagraphEditor: React.FC = () => {
 
   if (!currentProject) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-gray-500">プロジェクトが読み込まれていません</p>
+      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center p-8">
+          <div className="w-20 h-20 mx-auto mb-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <Image className="w-10 h-10 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            プロジェクトが読み込まれていません
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            ファイルを開いて編集を開始してください
+          </p>
+        </div>
       </div>
     );
   }
 
   if (!selectedParagraph) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-gray-500">パラグラフを選択してください</p>
+      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center p-8">
+          <div className="w-20 h-20 mx-auto mb-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <Plus className="w-10 h-10 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            パラグラフを選択してください
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            左のサイドバーから編集したいパラグラフを選択してください
+          </p>
+        </div>
       </div>
     );
   }
@@ -133,107 +155,231 @@ export const ParagraphEditor: React.FC = () => {
   ) || [];
 
   return (
-    <div className="flex-1 overflow-y-auto h-full">
-      <div className="max-w-4xl mx-auto p-6 space-y-6 min-h-full">
-        {/* ヘッダー */}
-        <div className="border-b border-gray-200 pb-4">
-          <h1 className="text-2xl font-bold text-gray-900">パラグラフ編集</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            選択中: {selectedParagraph.title}
-          </p>
+    <div className="flex-1 overflow-y-auto h-full bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto px-16 py-8 space-y-8 min-h-full paragraph-editor-container">
+        {/* 折りたたみ可能なヘッダー */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div 
+            className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {isHeaderCollapsed ? (
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronUp className="w-5 h-5 text-gray-400" />
+                  )}
+                  <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    パラグラフ編集
+                  </h1>
+                </div>
+                {isHeaderCollapsed && (
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedParagraph.title}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  selectedParagraph.type === 'start' 
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                    : selectedParagraph.type === 'end'
+                    ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                }`}>
+                  {selectedParagraph.type === 'start' ? 'スタート' : 
+                   selectedParagraph.type === 'end' ? 'エンド' : '中間'}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {!isHeaderCollapsed && (
+            <div className="px-8 pb-8 animate-slide-in">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                選択中: <span className="font-medium">{selectedParagraph.title}</span>
+              </p>
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                  選択肢: {selectedParagraph.content.choices.length}個
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                  文字数: {selectedParagraph.content.text.length}
+                </div>
+                {selectedParagraph.content.background && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full" />
+                    背景画像あり
+                  </div>
+                )}
+                {selectedParagraph.content.bgm && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full" />
+                    BGMあり
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 基本情報 */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="タイトル"
-              value={selectedParagraph.title}
-              onChange={(e) => handleUpdateTitle(e.target.value)}
-              placeholder="パラグラフのタイトルを入力"
-            />
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
-                タイプ
-              </label>
-              <select
-                value={selectedParagraph.type}
-                onChange={(e) => handleUpdateType(e.target.value as 'start' | 'middle' | 'end')}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="start">スタート</option>
-                <option value="middle">中間</option>
-                <option value="end">エンド</option>
-              </select>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+          <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                <Image className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">基本情報</h2>
             </div>
           </div>
+          
+          <div style={{ padding: '2rem 3rem' }}>
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                  <Input
+                    label="タイトル"
+                    value={selectedParagraph.title}
+                    onChange={(e) => handleUpdateTitle(e.target.value)}
+                    placeholder="パラグラフのタイトルを入力"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    タイプ
+                  </label>
+                  <select
+                    value={selectedParagraph.type}
+                    onChange={(e) => handleUpdateType(e.target.value as 'start' | 'middle' | 'end')}
+                    className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                  >
+                    <option value="start">スタート</option>
+                    <option value="middle">中間</option>
+                    <option value="end">エンド</option>
+                  </select>
+                </div>
+              </div>
 
-          <Textarea
-            label="本文"
-            value={selectedParagraph.content.text}
-            onChange={(e) => handleUpdateText(e.target.value)}
-            placeholder="パラグラフの本文を入力してください..."
-            rows={8}
-          />
+              <div className="space-y-3">
+                <Textarea
+                  label="本文"
+                  value={selectedParagraph.content.text}
+                  onChange={(e) => handleUpdateText(e.target.value)}
+                  placeholder="パラグラフの本文を入力してください..."
+                  rows={6}
+                  className="resize-none"
+                />
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span>文字数: {selectedParagraph.content.text.length}</span>
+                  <span>適度な文字数で読みやすくなります</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 選択肢編集 */}
         {selectedParagraph.type !== 'end' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">選択肢</h2>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleAddChoice}
-                disabled={selectedParagraph.content.choices.length >= 5}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                選択肢追加
-              </Button>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+            <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+                    <Plus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">選択肢</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">最大5個まで追加可能</p>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleAddChoice}
+                  disabled={selectedParagraph.content.choices.length >= 5}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  選択肢追加
+                </Button>
+              </div>
             </div>
+            
+            <div style={{ padding: '2rem 3rem' }}>
 
             {selectedParagraph.content.choices.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 rounded-lg">
-                <p className="text-gray-500">選択肢がありません</p>
+              <div className="text-left py-8 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                    <Plus className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-gray-700 dark:text-gray-300 font-medium">選択肢がありません</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">最初の選択肢を追加してストーリーを進めましょう</p>
+                  </div>
+                </div>
                 <Button
                   variant="primary"
                   size="sm"
                   onClick={handleAddChoice}
-                  className="mt-2"
+                  className="flex items-center gap-2"
                 >
-                  最初の選択肢を追加
+                  <Plus className="w-4 h-4" />
+                  選択肢を追加
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {selectedParagraph.content.choices.map((choice, index) => (
-                  <ChoiceEditor
-                    key={choice.id}
-                    choice={choice}
-                    index={index}
-                    paragraphs={currentProject.paragraphs}
-                    onUpdate={(text, targetId) =>
-                      handleUpdateChoice(choice.id, text, targetId)
-                    }
-                    onDelete={() => handleDeleteChoice(choice.id)}
-                    onCreateNewParagraph={handleCreateNewParagraph}
-                    canDelete={selectedParagraph.content.choices.length > 1}
-                  />
+                  <div key={choice.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600">
+                    <ChoiceEditor
+                      choice={choice}
+                      index={index}
+                      paragraphs={currentProject.paragraphs}
+                      onUpdate={(text, targetId) =>
+                        handleUpdateChoice(choice.id, text, targetId)
+                      }
+                      onDelete={() => handleDeleteChoice(choice.id)}
+                      onCreateNewParagraph={handleCreateNewParagraph}
+                      canDelete={selectedParagraph.content.choices.length > 1}
+                    />
+                  </div>
                 ))}
               </div>
             )}
 
-            <div className="text-sm text-gray-600">
-              最大5個まで選択肢を追加できます。
-              現在: {selectedParagraph.content.choices.length}/5
+              <div className="flex items-center justify-between pt-6 mt-6 border-t border-gray-200 dark:border-gray-600">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  選択肢数: {selectedParagraph.content.choices.length}/5
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-500">
+                  選択肢が多いとプレイヤーの選択肢が増えます
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {/* アセット設定 */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">アセット</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+          <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                <Music className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">アセット</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">背景画像やBGMを設定</p>
+              </div>
+            </div>
+          </div>
+          
+          <div style={{ padding: '2rem 3rem' }} className="space-y-8">
           
           {/* 背景画像設定 */}
           <div className="space-y-3">
@@ -404,6 +550,7 @@ export const ParagraphEditor: React.FC = () => {
               </select>
             </div>
           )}
+          </div>
         </div>
 
         {/* 下部余白 - スクロール時の視認性確保 */}
