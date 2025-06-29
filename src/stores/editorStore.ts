@@ -71,13 +71,31 @@ export const useEditorStore = create<EditorStore>()(
           });
         },
 
-        loadProject: (project: NovelProject) => {
-          set({
-            currentProject: project,
-            selectedParagraphId: project.paragraphs[0]?.id || null,
-            isModified: false,
-            mode: 'editor',
-          });
+        loadProject: async (project: NovelProject) => {
+          try {
+            console.log('プロジェクト読み込み開始:', project.title);
+            
+            // アセットURL再生成処理を実行
+            const regeneratedProject = await regenerateAssetUrls(project);
+            
+            set({
+              currentProject: regeneratedProject,
+              selectedParagraphId: regeneratedProject.paragraphs[0]?.id || null,
+              isModified: false,
+              mode: 'editor',
+            });
+            
+            console.log('プロジェクト読み込み完了:', regeneratedProject.title);
+          } catch (error) {
+            console.error('プロジェクト読み込みエラー:', error);
+            // エラー時でも基本的な読み込みは実行
+            set({
+              currentProject: project,
+              selectedParagraphId: project.paragraphs[0]?.id || null,
+              isModified: false,
+              mode: 'editor',
+            });
+          }
         },
 
         updateProject: (updates: Partial<NovelProject>) => {
@@ -497,3 +515,51 @@ export const useEditorStore = create<EditorStore>()(
     { name: 'EditorStore' }
   )
 );
+
+/**
+ * アセットURL再生成関数
+ * プロジェクト読み込み時にObjectURLが無効になっている可能性があるため、
+ * IndexedDBから新しいURLを生成し直す
+ */
+async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject> {
+  console.log('アセットURL再生成開始:', project.assets.length, '個のアセット');
+  
+  const regeneratedAssets: Asset[] = [];
+  
+  for (const asset of project.assets) {
+    try {
+      // ObjectURLが無効かチェック（blob:から始まるURL）
+      if (asset.url.startsWith('blob:')) {
+        console.log(`ObjectURL再生成中: ${asset.name}`);
+        
+        // IndexedDBから新しいURLを生成
+        const newUrl = await assetStorage.getAssetUrl(project.id, asset.id);
+        
+        regeneratedAssets.push({
+          ...asset,
+          url: newUrl,
+          metadata: {
+            ...asset.metadata,
+            lastUsed: new Date()
+          }
+        });
+        
+        console.log(`✅ URL再生成完了: ${asset.name}`);
+      } else {
+        // Base64や他の形式はそのまま維持
+        regeneratedAssets.push(asset);
+      }
+    } catch (error) {
+      console.warn(`⚠️ アセットURL再生成失敗: ${asset.name}`, error);
+      // エラーの場合でも元のアセットを保持（UI表示エラーを防ぐ）
+      regeneratedAssets.push(asset);
+    }
+  }
+  
+  console.log('アセットURL再生成完了:', regeneratedAssets.length, '個のアセット処理');
+  
+  return {
+    ...project,
+    assets: regeneratedAssets
+  };
+}

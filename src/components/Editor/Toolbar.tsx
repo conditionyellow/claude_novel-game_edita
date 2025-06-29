@@ -62,7 +62,7 @@ export const Toolbar: React.FC = () => {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const projectData = JSON.parse(content) as NovelProject;
@@ -72,8 +72,8 @@ export const Toolbar: React.FC = () => {
           throw new Error('無効なプロジェクトファイル形式です。');
         }
 
-        // プロジェクトをロード
-        loadProject(projectData);
+        // プロジェクトをロード（非同期）
+        await loadProject(projectData);
         alert(`プロジェクト "${projectData.title}" を読み込みました。`);
       } catch (error) {
         console.error('ファイル読み込みエラー:', error);
