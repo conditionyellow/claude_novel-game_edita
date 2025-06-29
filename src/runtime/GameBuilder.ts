@@ -428,6 +428,37 @@ Game.prototype.showEndScreen = function() {
     document.getElementById('end-screen').style.display = 'block';
 };
 
+Game.prototype.showEndMessage = function() {
+    // エンド状態のメッセージを選択肢エリアに表示
+    var container = document.getElementById('choices-area');
+    container.innerHTML = '';
+    var self = this;
+    
+    // エンドメッセージを表示
+    var endMessage = document.createElement('div');
+    endMessage.className = 'end-message';
+    endMessage.style.cssText = 'text-align: center; padding: 20px; margin: 10px 0; background: rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.6); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 1px 1px 2px rgba(0, 0, 0, 1);';
+    endMessage.innerHTML = '<div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #fff;">--- END ---</div><div style="color: #ccc; font-size: 0.9rem;">画面をクリックして続行</div>';
+    
+    // クリックイベントを追加
+    endMessage.addEventListener('click', function() {
+        self.showEndScreen();
+    });
+    
+    // ホバー効果を追加
+    endMessage.addEventListener('mouseenter', function() {
+        this.style.background = 'rgba(255, 255, 255, 0.2)';
+        this.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+    });
+    
+    endMessage.addEventListener('mouseleave', function() {
+        this.style.background = 'rgba(0, 0, 0, 0.3)';
+        this.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+    });
+    
+    container.appendChild(endMessage);
+};
+
 Game.prototype.showMenu = function() {
     document.getElementById('menu-overlay').style.display = 'flex';
 };
@@ -467,7 +498,8 @@ Game.prototype.updateGameUI = function() {
     // ゲーム終了判定
     var self = this;
     if (isGameEnd) {
-        setTimeout(function() { self.showEndScreen(); }, 1000);
+        // 即座にエンド状態に移行（自動遷移は行わない）
+        self.showEndMessage();
     }
 };
 

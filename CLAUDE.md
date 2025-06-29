@@ -719,6 +719,13 @@ describe('Editor Workflow', () => {
     - 背景画像最大活用: 透明度調整により背景画像の視認性大幅向上 ✅
     - 視覚的統一性: エディタプレビューとビルド版の完全な統一 ✅
     - ユーザビリティ向上: 背景画像を最大限活用した没入感ある体験 ✅
+19. **ビルド版ゲームEND画面ユーザー制御**: ゲーム終了時の操作性向上 ✅
+    - END画面自動遷移廃止: 1秒自動遷移 → ユーザークリック制御 ✅
+    - ユーザーガイダンス表示: 「画面をクリックして続行」メッセージ ✅
+    - インタラクティブUI: クリッカブルエリア・ホバー効果付きEND表示 ✅
+    - プレビュー版との統一: ボタンクリック形式での操作統一 ✅
+    - 視覚的一貫性: ゲーム内UI統一デザインでのEND表示 ✅
+    - UX向上: ユーザーのペースでゲーム終了を体験可能 ✅
 
 ### ⏳ 次回実装予定
 1. **キャラクター立ち絵システム**: キャラクターアセット表示機能
@@ -1401,6 +1408,73 @@ export const Tooltip: React.FC<TooltipProps> = ({
 - **ホバー応答性**: マウスオーバー時の境界線・背景色変化の正常動作確認 ✅
 - **レスポンシブ対応**: デスクトップ・タブレット・モバイルでの統一表示確認 ✅
 - **没入感向上**: 背景画像を活用した視覚的没入体験の大幅向上確認 ✅
+
+### Phase 11: ビルド版ゲームEND画面ユーザー制御実装完了 ✅
+
+#### 実装内容
+2024年6月29日追加実装：
+
+##### END画面遷移制御の改善
+- **自動遷移廃止**: 1秒タイマー自動遷移をユーザークリック制御に変更
+- **ユーザーガイダンス**: 「画面をクリックして続行」メッセージ表示
+- **インタラクティブUI**: クリッカブルエリア・ホバー効果付きEND表示
+- **プレビュー版統一**: ボタンクリック形式での操作統一
+- **視覚的一貫性**: ゲーム内UI統一デザインでのEND表示
+
+##### showEndMessage新メソッド実装
+- **即座表示**: ゲーム終了時の即座エンド状態表示
+- **クリック待機**: ユーザーの任意タイミングでEND画面遷移
+- **ホバー効果**: 白枠境界線とマウスオーバー応答性
+- **視覚的フィードバック**: 統一されたボタンスタイル適用
+
+#### 技術実装詳細
+
+##### 自動遷移から手動制御への変更
+```javascript
+// 変更前：自動遷移
+if (isGameEnd) {
+    setTimeout(function() { self.showEndScreen(); }, 1000);
+}
+
+// 変更後：ユーザー制御
+if (isGameEnd) {
+    self.showEndMessage();  // 即座にエンドメッセージ表示
+}
+```
+
+##### showEndMessageメソッド実装
+```javascript
+Game.prototype.showEndMessage = function() {
+    var container = document.getElementById('choices-area');
+    container.innerHTML = '';
+    var self = this;
+    
+    // エンドメッセージを表示
+    var endMessage = document.createElement('div');
+    endMessage.style.cssText = 'text-align: center; padding: 20px; background: rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.6); border-radius: 8px; cursor: pointer; transition: all 0.3s ease;';
+    endMessage.innerHTML = '<div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #fff;">--- END ---</div><div style="color: #ccc; font-size: 0.9rem;">画面をクリックして続行</div>';
+    
+    // クリックイベントでEND画面遷移
+    endMessage.addEventListener('click', function() {
+        self.showEndScreen();
+    });
+    
+    // ホバー効果
+    endMessage.addEventListener('mouseenter', function() {
+        this.style.background = 'rgba(255, 255, 255, 0.2)';
+        this.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+    });
+};
+```
+
+#### 動作確認完了項目
+- **自動遷移廃止**: 1秒タイマーの完全削除と手動制御への移行確認 ✅
+- **エンドメッセージ表示**: ゲーム終了時の適切なガイダンス表示確認 ✅
+- **クリック応答性**: エンドメッセージクリック時のEND画面遷移確認 ✅
+- **ホバー効果**: マウスオーバー時の視覚的フィードバック確認 ✅
+- **視覚的統一性**: ゲーム内UIとの一貫したデザイン確認 ✅
+- **プレビュー版統一**: エディタプレビューとビルド版の操作統一確認 ✅
+- **UX向上**: ユーザーのペースでのゲーム終了体験確認 ✅
 
 #### 技術実装詳細
 
