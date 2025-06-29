@@ -273,7 +273,7 @@ export const Toolbar: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={handleTitleEdit}
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-6 w-6 p-0 opacity-70 hover:opacity-100 transition-opacity"
                     >
                       <Edit3 className="w-3 h-3" />
                     </Button>
