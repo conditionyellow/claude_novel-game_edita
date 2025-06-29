@@ -27,40 +27,6 @@ export const FlowEditor: React.FC = () => {
     deleteParagraph: typeof deleteParagraph
   });
 
-  // 改善された自動レイアウト機能
-  const autoLayout = useCallback(() => {
-    if (!currentProject || currentProject.paragraphs.length === 0) return;
-
-    console.log('自動レイアウト開始 - パラグラフ数:', currentProject.paragraphs.length);
-
-    // 現在のノードとエッジを取得
-    const currentNodes = nodes;
-    const currentEdges = edges;
-
-    console.log('現在のノード数:', currentNodes.length);
-    console.log('現在のエッジ数:', currentEdges.length);
-
-    // flowUtilsの高度なレイアウトアルゴリズムを適用
-    const layoutedNodes = applyAutoLayout(currentNodes, currentEdges);
-
-    console.log('レイアウト後のノード数:', layoutedNodes.length);
-
-    // 計算された位置をパラグラフに反映
-    layoutedNodes.forEach(node => {
-      const paragraph = currentProject.paragraphs.find(p => p.id === node.id);
-      if (paragraph) {
-        console.log(`ノード ${paragraph.title} の位置を更新:`, node.position);
-        updateParagraph(paragraph.id, {
-          position: node.position
-        });
-      }
-    });
-
-    // ノードの位置を更新
-    setNodes(layoutedNodes);
-
-    console.log('自動レイアウト完了');
-  }, [currentProject, updateParagraph, nodes, edges, setNodes]);
   
   // プロジェクトのパラグラフからノードを作成
   const createNodesFromParagraphs = useCallback(() => {
@@ -143,6 +109,41 @@ export const FlowEditor: React.FC = () => {
   
   console.log('FlowEditor - useNodesState result - nodes:', nodes);
   console.log('FlowEditor - useEdgesState result - edges:', edges);
+
+  // 改善された自動レイアウト機能
+  const autoLayout = useCallback(() => {
+    if (!currentProject || currentProject.paragraphs.length === 0) return;
+
+    console.log('自動レイアウト開始 - パラグラフ数:', currentProject.paragraphs.length);
+
+    // 現在のノードとエッジを取得
+    const currentNodes = nodes;
+    const currentEdges = edges;
+
+    console.log('現在のノード数:', currentNodes.length);
+    console.log('現在のエッジ数:', currentEdges.length);
+
+    // flowUtilsの高度なレイアウトアルゴリズムを適用
+    const layoutedNodes = applyAutoLayout(currentNodes, currentEdges);
+
+    console.log('レイアウト後のノード数:', layoutedNodes.length);
+
+    // 計算された位置をパラグラフに反映
+    layoutedNodes.forEach(node => {
+      const paragraph = currentProject.paragraphs.find(p => p.id === node.id);
+      if (paragraph) {
+        console.log(`ノード ${paragraph.title} の位置を更新:`, node.position);
+        updateParagraph(paragraph.id, {
+          position: node.position
+        });
+      }
+    });
+
+    // ノードの位置を更新
+    setNodes(layoutedNodes);
+
+    console.log('自動レイアウト完了');
+  }, [currentProject, updateParagraph, nodes, edges, setNodes]);
   
   // ドラッグ終了時のハンドラー
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
