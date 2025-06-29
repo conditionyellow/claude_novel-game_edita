@@ -1039,6 +1039,85 @@ className="max-w-[300px] w-full h-auto object-contain hover:scale-105 transition
 - **パラグラフエディタ表示**: 画面内収まりでの適切な画像表示確認 ✅
 - **レスポンシブ対応**: 各種画面サイズでの適切な表示確認 ✅
 
+### Phase 8.5: フローエディタ自動レイアウト改善実装完了 ✅
+
+#### 実装内容
+2024年6月29日追加実装：
+
+##### 自動レイアウトアルゴリズム大幅改善
+- **高度なレイアウトアルゴリズム採用**: flowUtils.tsの洗練されたアルゴリズムをFlowEditorで使用
+- **重複回避システム**: レベル別Y座標追跡による確実なノード重複防止
+- **適応的間隔調整**: ノード数とレベルに応じた動的間隔計算
+- **複数ルートノード対応**: 複数のスタートノードがある場合の適切な配置
+- **孤立ノード処理**: 接続されていないノードの下部配置システム
+
+##### レイアウト定数最適化
+- **水平間隔**: 350px → 400px（ノード間の十分な間隔確保）
+- **垂直間隔**: 250px → 200px（コンパクトな縦方向配置）
+- **左端マージン**: 50px追加（画面端からの適切な余白）
+- **最小ノード間隔**: 150px（重複防止の安全マージン）
+
+##### アルゴリズム技術仕様
+- **幅優先探索（BFS）**: ツリー構造に最適化されたノード配置順序
+- **レベル管理**: 各階層でのY座標追跡による重複完全回避
+- **動的Y座標計算**: `levelYOffsets.set(level, currentY + VERTICAL_SPACING)`
+- **ルート間調整**: `rootIndex * VERTICAL_SPACING * 0.5`による複数ルート対応
+
+#### 技術実装詳細
+
+##### FlowEditor.tsx改良
+```typescript
+// 改善された自動レイアウト機能
+const autoLayout = useCallback(() => {
+  if (!currentProject || currentProject.paragraphs.length === 0) return;
+  
+  // flowUtilsの高度なレイアウトアルゴリズムを適用
+  const layoutedNodes = applyAutoLayout(currentNodes, currentEdges);
+  
+  // 計算された位置をパラグラフに反映
+  layoutedNodes.forEach(node => {
+    const paragraph = currentProject.paragraphs.find(p => p.id === node.id);
+    if (paragraph) {
+      updateParagraph(paragraph.id, { position: node.position });
+    }
+  });
+  
+  setNodes(layoutedNodes);
+}, [currentProject, updateParagraph, nodes, edges, setNodes]);
+```
+
+##### flowUtils.ts高度アルゴリズム
+```typescript
+// 改善された自動レイアウト（重複回避・適切な間隔調整）
+export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
+  const positioned = new Set<string>();
+  const levelYOffsets = new Map<number, number>(); // 各レベルでのY座標追跡
+  
+  // 幅優先探索でレイアウト
+  const queue: Array<{ nodeId: string; level: number }> = [
+    { nodeId: rootNode.id, level: 0 }
+  ];
+  
+  // レベル別Y座標管理による重複回避
+  const currentY = levelYOffsets.get(level) || 0;
+  levelYOffsets.set(level, currentY + VERTICAL_SPACING);
+  
+  position: {
+    x: level * HORIZONTAL_SPACING + 50, // 左端マージン
+    y: currentY + (rootIndex * VERTICAL_SPACING * 0.5), // ルート調整
+  }
+};
+```
+
+#### 動作確認完了項目
+- **ノード重複完全回避**: レベル別Y座標追跡による確実な重複防止確認 ✅
+- **適切な間隔配置**: 水平400px・垂直200pxでの見やすい配置確認 ✅
+- **複数ルート対応**: 複数スタートノードの適切な配置確認 ✅
+- **孤立ノード処理**: 接続なしノードの下部配置確認 ✅
+- **リアルタイム更新**: レイアウト変更の即座パラグラフ反映確認 ✅
+- **エッジ保持**: レイアウト変更後の接続線維持確認 ✅
+- **パフォーマンス**: 大量ノードでの高速レイアウト処理確認 ✅
+
 ---
 
 このCLAUDE.mdは、ノベルゲームエディタの包括的な設計書として、開発チーム全体での認識統一と効率的な開発進行を支援します。

@@ -4,6 +4,7 @@ import 'reactflow/dist/style.css';
 import { useEditorStore } from '../../stores/editorStore';
 import { ParagraphNode } from './ParagraphNode';
 import { Button } from '../UI';
+import { applyAutoLayout } from '../../utils/flowUtils';
 
 // カスタムノードタイプの定義
 const nodeTypes = {
@@ -26,58 +27,40 @@ export const FlowEditor: React.FC = () => {
     deleteParagraph: typeof deleteParagraph
   });
 
-  // 自動レイアウト機能
+  // 改善された自動レイアウト機能
   const autoLayout = useCallback(() => {
-    if (!currentProject) return;
+    if (!currentProject || currentProject.paragraphs.length === 0) return;
 
-    const startParagraphs = currentProject.paragraphs.filter(p => p.type === 'start');
-    const middleParagraphs = currentProject.paragraphs.filter(p => p.type === 'middle');
-    const endParagraphs = currentProject.paragraphs.filter(p => p.type === 'end');
+    console.log('自動レイアウト開始 - パラグラフ数:', currentProject.paragraphs.length);
 
-    const nodeWidth = 300;
-    const nodeHeight = 200;
-    const horizontalSpacing = 400;
-    const verticalSpacing = 250;
+    // 現在のノードとエッジを取得
+    const currentNodes = nodes;
+    const currentEdges = edges;
 
-    let currentX = 100;
-    let currentY = 100;
+    console.log('現在のノード数:', currentNodes.length);
+    console.log('現在のエッジ数:', currentEdges.length);
 
-    // スタートノードを左端に配置
-    startParagraphs.forEach((paragraph, index) => {
-      updateParagraph(paragraph.id, {
-        position: {
-          x: currentX,
-          y: currentY + (index * verticalSpacing)
-        }
-      });
+    // flowUtilsの高度なレイアウトアルゴリズムを適用
+    const layoutedNodes = applyAutoLayout(currentNodes, currentEdges);
+
+    console.log('レイアウト後のノード数:', layoutedNodes.length);
+
+    // 計算された位置をパラグラフに反映
+    layoutedNodes.forEach(node => {
+      const paragraph = currentProject.paragraphs.find(p => p.id === node.id);
+      if (paragraph) {
+        console.log(`ノード ${paragraph.title} の位置を更新:`, node.position);
+        updateParagraph(paragraph.id, {
+          position: node.position
+        });
+      }
     });
 
-    currentX += horizontalSpacing;
+    // ノードの位置を更新
+    setNodes(layoutedNodes);
 
-    // 中間ノードを中央に配置
-    middleParagraphs.forEach((paragraph, index) => {
-      const row = Math.floor(index / 3);
-      const col = index % 3;
-      updateParagraph(paragraph.id, {
-        position: {
-          x: currentX + (col * horizontalSpacing),
-          y: currentY + (row * verticalSpacing)
-        }
-      });
-    });
-
-    currentX += Math.max(1, Math.ceil(middleParagraphs.length / 3)) * horizontalSpacing;
-
-    // エンドノードを右端に配置
-    endParagraphs.forEach((paragraph, index) => {
-      updateParagraph(paragraph.id, {
-        position: {
-          x: currentX,
-          y: currentY + (index * verticalSpacing)
-        }
-      });
-    });
-  }, [currentProject, updateParagraph]);
+    console.log('自動レイアウト完了');
+  }, [currentProject, updateParagraph, nodes, edges, setNodes]);
   
   // プロジェクトのパラグラフからノードを作成
   const createNodesFromParagraphs = useCallback(() => {

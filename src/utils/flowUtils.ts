@@ -1,10 +1,11 @@
 import { Node, Edge } from 'reactflow';
-import { Paragraph, Choice, ParagraphNodeData, ChoiceEdgeData } from '@/types';
+import { Paragraph, Choice, ParagraphNodeData, ChoiceEdgeData } from '../types';
 import { generateId } from './index';
 
 // 自動レイアウト用の定数
-const HORIZONTAL_SPACING = 350;
-const VERTICAL_SPACING = 250;
+const HORIZONTAL_SPACING = 400;
+const VERTICAL_SPACING = 200;
+const MIN_NODE_SPACING = 150; // 最小ノード間隔
 
 // パラグラフからフローノードを作成
 export const createFlowNode = (
@@ -138,8 +139,10 @@ export const convertParagraphsToFlow = (
   return { nodes, edges };
 };
 
-// 自動レイアウト（Dagre風の簡易版）
+// 改善された自動レイアウト（重複回避・適切な間隔調整）
 export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
+  if (nodes.length === 0) return nodes;
+
   const incomingEdges = new Map<string, Edge[]>();
   const outgoingEdges = new Map<string, Edge[]>();
 
@@ -155,50 +158,79 @@ export const applyAutoLayout = (nodes: Node[], edges: Edge[]) => {
   });
 
   // ルートノード（スタートノード）を見つける
-  const rootNode = nodes.find(node => 
+  const rootNodes = nodes.filter(node => 
     (node.data as any)?.paragraph?.type === 'start' || 
     !incomingEdges.has(node.id)
   );
 
-  if (!rootNode) return nodes;
+  if (rootNodes.length === 0) {
+    // ルートノードがない場合は、最初のノードをルートとして扱う
+    rootNodes.push(nodes[0]);
+  }
 
   const positioned = new Set<string>();
   const newNodes = [...nodes];
+  const levelYOffsets = new Map<number, number>(); // 各レベルでのY座標追跡
 
-  // 幅優先探索でレイアウト
-  const queue: Array<{ nodeId: string; level: number; branchIndex: number }> = [
-    { nodeId: rootNode.id, level: 0, branchIndex: 0 }
-  ];
+  // 初期レベル設定
+  for (let i = 0; i < 10; i++) {
+    levelYOffsets.set(i, 0);
+  }
 
-  while (queue.length > 0) {
-    const { nodeId, level, branchIndex } = queue.shift()!;
-    
-    if (positioned.has(nodeId)) continue;
-    positioned.add(nodeId);
+  // 複数のルートノードがある場合の処理
+  rootNodes.forEach((rootNode, rootIndex) => {
+    const queue: Array<{ nodeId: string; level: number }> = [
+      { nodeId: rootNode.id, level: 0 }
+    ];
 
-    const nodeIndex = newNodes.findIndex(n => n.id === nodeId);
+    while (queue.length > 0) {
+      const { nodeId, level } = queue.shift()!;
+      
+      if (positioned.has(nodeId)) continue;
+      positioned.add(nodeId);
+
+      // 現在のレベルでのY座標を取得・更新
+      const currentY = levelYOffsets.get(level) || 0;
+      levelYOffsets.set(level, currentY + VERTICAL_SPACING);
+
+      const nodeIndex = newNodes.findIndex(n => n.id === nodeId);
+      if (nodeIndex >= 0) {
+        newNodes[nodeIndex] = {
+          ...newNodes[nodeIndex],
+          position: {
+            x: level * HORIZONTAL_SPACING + 50, // 左端マージン追加
+            y: currentY + (rootIndex * VERTICAL_SPACING * 0.5), // ルート間の調整
+          },
+        };
+      }
+
+      // 子ノードをキューに追加（幅優先探索）
+      const outgoing = outgoingEdges.get(nodeId) || [];
+      outgoing.forEach(edge => {
+        if (!positioned.has(edge.target)) {
+          queue.push({
+            nodeId: edge.target,
+            level: level + 1,
+          });
+        }
+      });
+    }
+  });
+
+  // 配置されていないノード（孤立ノード）の処理
+  const unpositioned = newNodes.filter(node => !positioned.has(node.id));
+  unpositioned.forEach((node, index) => {
+    const nodeIndex = newNodes.findIndex(n => n.id === node.id);
     if (nodeIndex >= 0) {
       newNodes[nodeIndex] = {
         ...newNodes[nodeIndex],
         position: {
-          x: level * HORIZONTAL_SPACING,
-          y: branchIndex * VERTICAL_SPACING,
+          x: 50,
+          y: 1000 + (index * VERTICAL_SPACING), // 下部に配置
         },
       };
     }
-
-    // 子ノードをキューに追加
-    const outgoing = outgoingEdges.get(nodeId) || [];
-    outgoing.forEach((edge, index) => {
-      if (!positioned.has(edge.target)) {
-        queue.push({
-          nodeId: edge.target,
-          level: level + 1,
-          branchIndex: branchIndex * outgoing.length + index,
-        });
-      }
-    });
-  }
+  });
 
   return newNodes;
 };
