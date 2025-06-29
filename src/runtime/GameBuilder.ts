@@ -1052,7 +1052,7 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     padding: 15px;
@@ -1063,7 +1063,7 @@ body {
 }
 
 #text-area {
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
     padding: 20px;
@@ -1079,14 +1079,14 @@ body {
     font-weight: bold;
     margin-bottom: 15px;
     color: #fff;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 1px 1px 2px rgba(0, 0, 0, 1);
 }
 
 #paragraph-text {
     font-size: 1.1rem;
     line-height: 1.8;
     color: #f0f0f0;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 1px 1px 2px rgba(0, 0, 0, 1);
 }
 
 #choices-area {
@@ -1096,10 +1096,10 @@ body {
 .choice-btn {
     display: block;
     width: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.6);
     color: #fff;
     padding: 12px 16px;
     margin: 6px 0;
@@ -1108,18 +1108,18 @@ body {
     font-size: 1rem;
     text-align: left;
     transition: all 0.3s ease;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 1px 1px 2px rgba(0, 0, 0, 1);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .choice-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
-    border-color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.8);
     transform: translateX(10px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 1px 1px 2px rgba(0, 0, 0, 1);
 }
 
 .game-controls {
