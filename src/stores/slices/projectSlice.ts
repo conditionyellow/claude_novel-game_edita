@@ -79,6 +79,15 @@ export const createProjectSlice: StateCreator<ProjectSlice> = (set, get) => ({
     const { currentProject } = get();
     if (!currentProject) return;
 
+    // タイトルパラグラフの重複チェック
+    if (type === 'title') {
+      const existingTitleParagraph = currentProject.paragraphs.find(p => p.type === 'title');
+      if (existingTitleParagraph) {
+        console.warn('タイトルパラグラフは1つのプロジェクトに1つまでしか作成できません');
+        return null;
+      }
+    }
+
     const newParagraph = createEmptyParagraph(type);
     const updatedParagraphs = [...currentProject.paragraphs, newParagraph];
 

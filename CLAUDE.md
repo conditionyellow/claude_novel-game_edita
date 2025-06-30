@@ -39,6 +39,7 @@
 └── BGM
 
 パラグラフタイプ
+├── タイトル（タイトル画面・1プロジェクト1つまで）
 ├── スタート（開始点）
 ├── 中間（分岐・合流・ループ対応）
 └── エンド（終了点・複数可）
@@ -51,7 +52,7 @@
 ```typescript
 interface Paragraph {
   id: string;
-  type: 'start' | 'middle' | 'end';
+  type: 'title' | 'start' | 'middle' | 'end';
   title: string;
   content: {
     text: string;
@@ -59,6 +60,11 @@ interface Paragraph {
     background?: Asset;
     characters?: Character[];
     bgm?: Asset;
+    // タイトルパラグラフ専用フィールド
+    titleImage?: Asset;
+    titleColor?: string;
+    titleFontSize?: number;
+    showProjectTitle?: boolean;
   };
   position?: { x: number; y: number }; // ビジュアルエディタ用
   metadata: {
@@ -645,7 +651,7 @@ describe('Editor Workflow', () => {
 
 ## 開発状況サマリー
 
-### ✅ 完了済み機能（Phase 1-18）
+### ✅ 完了済み機能（Phase 1-19）
 
 #### Core Editor System（Phase 1-2）
 1. **基本エディタ機能**: パラグラフ作成・編集・削除
@@ -712,11 +718,21 @@ describe('Editor Workflow', () => {
 25. **全デバイス中央配置システム**: PC・タブレット・スマホ統一
     - 完全固定配置・ビューポート対応・二重中央配置・確実なマージン制御
 
-#### Project Management（Phase 17）
+#### Project Management & Title System（Phase 17-19）
 26. **プロジェクトタイトル編集システム**: 統合的タイトル管理機能
     - インライン編集UI・ホバー表示編集ボタン・キーボードショートカット対応
     - ファイル命名統合（保存・ビルド・セーブデータ）・プロジェクト別セーブ管理
     - 状態管理統合・バリデーション・日本語完全対応・旧データ自動移行
+
+#### Title Paragraph System（Phase 18-19）
+27. **タイトルパラグラフシステム**: 専用タイトル画面編集機能
+    - タイトルパラグラフ作成（1プロジェクト1つ制限）・タイトル画像設定・プロジェクトタイトル表示制御
+    - タイトル色・フォントサイズカスタマイズ・専用編集UI・背景画像/BGM除外設計
+28. **タイトルBGMシステム**: タイトル画面専用音響制御
+    - プロジェクト設定統合（project.settings.titleScreen.bgm）・エディタ内BGM選択UI
+    - プレビューモード統合BGM再生・ユーザーアクション連動再生・autoplay制限回避
+29. **タイトル編集ボタン削除**: 機能重複解消
+    - タイトルパラグラフ編集への統一・ツールバー簡素化・UX向上
 
 ### 🎯 技術的特徴と品質
 
@@ -740,7 +756,7 @@ describe('Editor Workflow', () => {
 - **モバイル最適化**: iOS Safari・Android Chrome完全対応
 - **PWA準備**: Service Worker・Web App Manifest対応準備
 
-### ⏳ 次回実装予定（Phase 18+）
+### ⏳ 次回実装予定（Phase 20+）
 1. **キャラクター立ち絵システム**: キャラクターアセット表示・位置制御・表情管理
 2. **リッチテキストエディタ**: 本文装飾機能（太字・色・サイズ・ルビ）
 3. **音響効果システム**: SE（効果音）管理・再生制御

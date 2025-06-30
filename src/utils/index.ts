@@ -1,18 +1,29 @@
 import { nanoid } from 'nanoid';
-import { Paragraph, Choice, NovelProject } from '../types';
+import { Paragraph, Choice, NovelProject, ParagraphType } from '../types';
 
 export const generateId = (): string => nanoid();
 
-export const createEmptyParagraph = (type: 'start' | 'middle' | 'end' = 'middle'): Paragraph => ({
+export const createEmptyParagraph = (type: ParagraphType = 'middle'): Paragraph => ({
   id: generateId(),
   type,
-  title: `${type === 'start' ? 'スタート' : type === 'end' ? 'エンド' : '中間'}パラグラフ`,
+  title: `${
+    type === 'title' ? 'タイトル' :
+    type === 'start' ? 'スタート' : 
+    type === 'end' ? 'エンド' : '中間'
+  }パラグラフ`,
   content: {
-    text: '',
-    choices: type === 'end' ? [] : [createEmptyChoice()],
+    text: type === 'title' ? 'ゲームのタイトル画面です' : '',
+    choices: (type === 'end' || type === 'title') ? [] : [createEmptyChoice()],
     background: undefined,
     characters: [],
     bgm: undefined,
+    // タイトルパラグラフのデフォルト設定
+    ...(type === 'title' && {
+      titleImage: undefined,
+      titleColor: '#ffffff',
+      titleFontSize: 48,
+      showProjectTitle: true,
+    }),
   },
   position: { x: 0, y: 0 },
   metadata: {
@@ -47,6 +58,15 @@ export const createEmptyProject = (): NovelProject => ({
       accent: '#f59e0b',
     },
     resolution: { width: 1280, height: 720 },
+    titleScreen: {
+      backgroundImage: undefined,
+      titleImage: undefined,
+      bgm: undefined,
+      showProjectTitle: true,
+      titlePosition: 'center',
+      titleColor: '#ffffff',
+      titleFontSize: 48,
+    },
   },
   metadata: {
     created: new Date(),
@@ -66,7 +86,7 @@ export const validateParagraph = (paragraph: Paragraph): string[] => {
     errors.push('本文が入力されていません');
   }
   
-  if (paragraph.type !== 'end' && paragraph.content.choices.length === 0) {
+  if (paragraph.type !== 'end' && paragraph.type !== 'title' && paragraph.content.choices.length === 0) {
     errors.push('選択肢が設定されていません');
   }
   
@@ -94,6 +114,11 @@ export const validateProject = (project: NovelProject): string[] => {
     errors.push('スタートパラグラフが存在しません');
   } else if (startParagraphs.length > 1) {
     errors.push('スタートパラグラフが複数存在します');
+  }
+  
+  const titleParagraphs = project.paragraphs.filter(p => p.type === 'title');
+  if (titleParagraphs.length > 1) {
+    errors.push('タイトルパラグラフが複数存在します。タイトルパラグラフは1つまでしか作成できません');
   }
   
   const endParagraphs = project.paragraphs.filter(p => p.type === 'end');
@@ -126,7 +151,7 @@ export const validateProject = (project: NovelProject): string[] => {
   startParagraphs.forEach(start => traverse(start.id));
   
   const unreachableParagraphs = project.paragraphs.filter(
-    p => p.type !== 'start' && !reachableIds.has(p.id)
+    p => p.type !== 'start' && p.type !== 'title' && !reachableIds.has(p.id)
   );
   
   unreachableParagraphs.forEach(paragraph => {

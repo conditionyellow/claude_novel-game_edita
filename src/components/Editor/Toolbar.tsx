@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 import { Button, Tooltip, Input } from '../UI';
-import { FileText, GitBranch, Eye, Save, FolderOpen, Plus, Image, Download, Edit3 } from 'lucide-react';
+import { FileText, GitBranch, Eye, Save, FolderOpen, Plus, Image, Download, Crown } from 'lucide-react';
 import { NovelProject } from '../../types';
 
 export const Toolbar: React.FC = () => {
@@ -13,13 +13,10 @@ export const Toolbar: React.FC = () => {
     saveProject,
     addParagraph,
     loadProject,
-    buildGame,
-    updateProjectTitle
+    buildGame
   } = useEditorStore();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editingTitle, setEditingTitle] = useState('');
 
   const handleModeChange = (newMode: 'editor' | 'flow' | 'preview' | 'assets') => {
     setMode(newMode);
@@ -31,6 +28,15 @@ export const Toolbar: React.FC = () => {
 
   const handleAddParagraph = () => {
     addParagraph('middle');
+  };
+
+  const handleAddTitleParagraph = () => {
+    const titleId = addParagraph('title');
+    if (titleId) {
+      setMode('editor'); // タイトルパラグラフ追加後はエディタモードに切り替え
+    } else {
+      alert('タイトルパラグラフは1つのプロジェクトに1つまでしか作成できません。');
+    }
   };
 
   const handleBuildGame = async () => {
@@ -86,33 +92,6 @@ export const Toolbar: React.FC = () => {
     event.target.value = '';
   };
 
-  const handleTitleEdit = () => {
-    if (!currentProject) return;
-    setEditingTitle(currentProject.title);
-    setIsEditingTitle(true);
-  };
-
-  const handleTitleSave = () => {
-    if (!editingTitle.trim()) {
-      alert('タイトルは空にできません。');
-      return;
-    }
-    updateProjectTitle(editingTitle);
-    setIsEditingTitle(false);
-  };
-
-  const handleTitleCancel = () => {
-    setIsEditingTitle(false);
-    setEditingTitle('');
-  };
-
-  const handleTitleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleTitleSave();
-    } else if (e.key === 'Escape') {
-      handleTitleCancel();
-    }
-  };
 
   return (
     <div className="toolbar">
@@ -224,6 +203,29 @@ export const Toolbar: React.FC = () => {
           </Button>
         </Tooltip>
         
+        <Tooltip 
+          content={
+            !currentProject 
+              ? "プロジェクトを開いてください" 
+              : currentProject.paragraphs.some(p => p.type === 'title')
+                ? "タイトルパラグラフは既に存在します"
+                : "タイトルパラグラフを追加"
+          } 
+          position="bottom" 
+          disabled={!currentProject}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleAddTitleParagraph}
+            disabled={!currentProject || currentProject.paragraphs.some(p => p.type === 'title')}
+            className="h-8"
+          >
+            <Crown className="w-4 h-4" />
+            <span className="ml-2 hidden lg:inline">タイトル追加</span>
+          </Button>
+        </Tooltip>
+        
         <div className="flex items-center gap-3 text-sm border-l border-gray-300 dark:border-gray-600 pl-4">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
@@ -234,53 +236,9 @@ export const Toolbar: React.FC = () => {
                 : 'bg-gray-400'
             }`} />
             
-            {/* タイトル表示・編集エリア */}
-            {isEditingTitle && currentProject ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onKeyDown={handleTitleKeyPress}
-                  className="h-6 text-sm min-w-[200px]"
-                  placeholder="プロジェクトタイトル"
-                  autoFocus
-                />
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={handleTitleSave}
-                  className="h-6 px-2 text-xs"
-                >
-                  保存
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={handleTitleCancel}
-                  className="h-6 px-2 text-xs"
-                >
-                  キャンセル
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 group">
-                <span className="text-gray-700 dark:text-gray-300 font-medium hidden sm:inline">
-                  {currentProject?.title || 'プロジェクトなし'}
-                </span>
-                {currentProject && (
-                  <Tooltip content="タイトルを編集" position="bottom">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleTitleEdit}
-                      className="h-6 w-6 p-0 opacity-70 hover:opacity-100 transition-opacity"
-                    >
-                      <Edit3 className="w-3 h-3" />
-                    </Button>
-                  </Tooltip>
-                )}
-              </div>
-            )}
+            <span className="text-gray-700 dark:text-gray-300 font-medium hidden sm:inline">
+              {currentProject?.title || 'プロジェクトなし'}
+            </span>
             
             {isModified && (
               <span className="text-amber-600 dark:text-amber-400 text-xs hidden sm:inline">

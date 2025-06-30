@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { EditorState, NovelProject, Paragraph, Asset } from '../types';
+import { EditorState, NovelProject, Paragraph, Asset, ParagraphType } from '../types';
 import { createEmptyProject, createEmptyParagraph } from '../utils';
 import { assetStorage } from '../utils/assetStorageManager';
 import { GameBuilder } from '../runtime/GameBuilder';
@@ -20,11 +20,10 @@ interface EditorStore extends EditorState {
   createNewProject: () => void;
   loadProject: (project: NovelProject) => void;
   updateProject: (updates: Partial<NovelProject>) => void;
-  updateProjectTitle: (title: string) => void;
   saveProject: () => void;
   
   // Paragraph actions
-  addParagraph: (type?: 'start' | 'middle' | 'end') => string | void;
+  addParagraph: (type?: ParagraphType) => string | void;
   updateParagraph: (id: string, updates: Partial<Paragraph>) => void;
   deleteParagraph: (id: string) => void;
   selectParagraph: (id: string | null) => void;
@@ -72,26 +71,63 @@ export const useEditorStore = create<EditorStore>()(
         },
 
         loadProject: async (project: NovelProject) => {
+          const DEBUG_PROJECT_LOAD = false; // プロジェクト読み込みデバッグモード
+          
           try {
-            console.log('プロジェクト読み込み開始:', project.title);
+            if (DEBUG_PROJECT_LOAD) console.log('プロジェクト読み込み開始:', project.title);
+            
+            // 古いプロジェクトデータにタイトル画面設定がない場合はデフォルト値を追加
+            const projectWithDefaults = {
+              ...project,
+              settings: {
+                ...project.settings,
+                titleScreen: project.settings.titleScreen || {
+                  backgroundImage: undefined,
+                  titleImage: undefined,
+                  bgm: undefined,
+                  showProjectTitle: true,
+                  titlePosition: 'center' as const,
+                  titleColor: '#ffffff',
+                  titleFontSize: 48,
+                }
+              }
+            };
             
             // アセットURL再生成処理を実行
-            const regeneratedProject = await regenerateAssetUrls(project);
+            const regeneratedProject = await regenerateAssetUrls(projectWithDefaults);
+            
+            // 破損アセットのクリーンアップ
+            const cleanedProject = await cleanupCorruptedAssets(regeneratedProject);
             
             set({
-              currentProject: regeneratedProject,
-              selectedParagraphId: regeneratedProject.paragraphs[0]?.id || null,
+              currentProject: cleanedProject,
+              selectedParagraphId: cleanedProject.paragraphs[0]?.id || null,
               isModified: false,
               mode: 'editor',
             });
             
-            console.log('プロジェクト読み込み完了:', regeneratedProject.title);
+            if (DEBUG_PROJECT_LOAD) console.log('プロジェクト読み込み完了:', cleanedProject.title);
           } catch (error) {
             console.error('プロジェクト読み込みエラー:', error);
             // エラー時でも基本的な読み込みは実行
+            const projectWithDefaults = {
+              ...project,
+              settings: {
+                ...project.settings,
+                titleScreen: project.settings.titleScreen || {
+                  backgroundImage: undefined,
+                  titleImage: undefined,
+                  bgm: undefined,
+                  showProjectTitle: true,
+                  titlePosition: 'center' as const,
+                  titleColor: '#ffffff',
+                  titleFontSize: 48,
+                }
+              }
+            };
             set({
-              currentProject: project,
-              selectedParagraphId: project.paragraphs[0]?.id || null,
+              currentProject: projectWithDefaults,
+              selectedParagraphId: projectWithDefaults.paragraphs[0]?.id || null,
               isModified: false,
               mode: 'editor',
             });
@@ -115,22 +151,6 @@ export const useEditorStore = create<EditorStore>()(
           });
         },
 
-        updateProjectTitle: (title: string) => {
-          const { currentProject } = get();
-          if (!currentProject) return;
-
-          set({
-            currentProject: {
-              ...currentProject,
-              title: title.trim(),
-              metadata: {
-                ...currentProject.metadata,
-                modified: new Date(),
-              },
-            },
-            isModified: true,
-          });
-        },
 
         saveProject: () => {
           const { currentProject } = get();
@@ -169,9 +189,18 @@ export const useEditorStore = create<EditorStore>()(
         },
 
         // Paragraph actions
-        addParagraph: (type = 'middle') => {
+        addParagraph: (type: ParagraphType = 'middle') => {
           const { currentProject } = get();
           if (!currentProject) return;
+
+          // タイトルパラグラフの重複チェック
+          if (type === 'title') {
+            const existingTitleParagraph = currentProject.paragraphs.find(p => p.type === 'title');
+            if (existingTitleParagraph) {
+              console.warn('タイトルパラグラフは1つのプロジェクトに1つまでしか作成できません');
+              return null;
+            }
+          }
 
           const newParagraph = createEmptyParagraph(type);
           const updatedParagraphs = [...currentProject.paragraphs, newParagraph];
@@ -462,23 +491,27 @@ export const useEditorStore = create<EditorStore>()(
             throw new Error('プロジェクトが読み込まれていません');
           }
 
+          const DEBUG_BUILD = false; // ビルドデバッグモード
+          
           try {
             // ビルドプロセス開始の通知
             console.log('ビルド開始:', currentProject.title);
-            console.log('パラグラフ数:', currentProject.paragraphs.length);
-            console.log('アセット数:', currentProject.assets.length);
+            if (DEBUG_BUILD) console.log('パラグラフ数:', currentProject.paragraphs.length);
+            if (DEBUG_BUILD) console.log('アセット数:', currentProject.assets.length);
             
-            // アセットの詳細をログ出力
-            currentProject.assets.forEach((asset, index) => {
-              console.log(`アセット ${index + 1}:`, {
-                id: asset.id,
-                name: asset.name,
-                type: asset.type,
-                category: asset.category,
-                url: asset.url ? asset.url.substring(0, 50) + '...' : 'なし',
-                hasMetadata: !!asset.metadata
+            // アセットの詳細をログ出力（デバッグモード時のみ）
+            if (DEBUG_BUILD) {
+              currentProject.assets.forEach((asset, index) => {
+                console.log(`アセット ${index + 1}:`, {
+                  id: asset.id,
+                  name: asset.name,
+                  type: asset.type,
+                  category: asset.category,
+                  url: asset.url ? asset.url.substring(0, 50) + '...' : 'なし',
+                  hasMetadata: !!asset.metadata
+                });
               });
-            });
+            }
 
             alert('ゲームのビルドを開始しています...');
 
@@ -504,7 +537,7 @@ export const useEditorStore = create<EditorStore>()(
             URL.revokeObjectURL(url);
 
             alert(`ゲーム "${fileName}" のビルドが完了しました！\n\nアセット数: ${currentProject.assets.length}個\nパラグラフ数: ${currentProject.paragraphs.length}個`);
-            console.log('Game built successfully:', fileName);
+            if (DEBUG_BUILD) console.log('Game built successfully:', fileName);
           } catch (error) {
             console.error('Build failed:', error);
             alert(`ビルドエラー: ${error.message}`);
@@ -517,12 +550,59 @@ export const useEditorStore = create<EditorStore>()(
 );
 
 /**
+ * 破損アセットのクリーンアップ関数
+ */
+async function cleanupCorruptedAssets(project: NovelProject): Promise<NovelProject> {
+  const DEBUG_CLEANUP = false; // クリーンアップデバッグモード
+  
+  if (DEBUG_CLEANUP) console.log('破損アセットクリーンアップ開始');
+  
+  const validAssets = project.assets.filter(asset => {
+    // コンソールエラーが出たアセットIDをチェック
+    const isCorrupted = ['EkQWHH1uCyI3Zy3iE0_UK', 'mOdDk9pe9wqfPYAASENJy'].includes(asset.id);
+    if (isCorrupted) {
+      if (DEBUG_CLEANUP) console.log(`破損アセットを削除: ${asset.name} (ID: ${asset.id})`);
+      return false;
+    }
+    return true;
+  });
+
+  if (validAssets.length !== project.assets.length) {
+    if (DEBUG_CLEANUP) console.log(`${project.assets.length - validAssets.length}個の破損アセットを削除しました`);
+    
+    // パラグラフからも破損アセット参照を削除
+    const cleanedParagraphs = project.paragraphs.map(paragraph => ({
+      ...paragraph,
+      content: {
+        ...paragraph.content,
+        background: validAssets.find(a => a.id === paragraph.content.background?.id) ? paragraph.content.background : undefined,
+        bgm: validAssets.find(a => a.id === paragraph.content.bgm?.id) ? paragraph.content.bgm : undefined,
+        titleImage: validAssets.find(a => a.id === paragraph.content.titleImage?.id) ? paragraph.content.titleImage : undefined,
+        characters: paragraph.content.characters?.filter(char => 
+          validAssets.find(a => a.id === char.sprite.id)
+        ) || []
+      }
+    }));
+
+    return {
+      ...project,
+      assets: validAssets,
+      paragraphs: cleanedParagraphs
+    };
+  }
+
+  return project;
+}
+
+/**
  * アセットURL再生成関数
  * プロジェクト読み込み時にObjectURLが無効になっている可能性があるため、
  * IndexedDBから新しいURLを生成し直す
  */
 async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject> {
-  console.log('アセットURL再生成開始:', project.assets.length, '個のアセット');
+  const DEBUG_ASSETS = false; // アセット処理デバッグモード
+  
+  if (DEBUG_ASSETS) console.log('アセットURL再生成開始:', project.assets.length, '個のアセット');
   
   const regeneratedAssets: Asset[] = [];
   
@@ -530,7 +610,7 @@ async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject>
     try {
       // ObjectURLが無効かチェック（blob:から始まるURL）
       if (asset.url.startsWith('blob:')) {
-        console.log(`ObjectURL再生成中: ${asset.name}`);
+        if (DEBUG_ASSETS) console.log(`ObjectURL再生成中: ${asset.name}`);
         
         // IndexedDBから新しいURLを生成
         const newUrl = await assetStorage.getAssetUrl(project.id, asset.id);
@@ -544,7 +624,7 @@ async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject>
           }
         });
         
-        console.log(`✅ URL再生成完了: ${asset.name}`);
+        if (DEBUG_ASSETS) console.log(`✅ URL再生成完了: ${asset.name}`);
       } else {
         // Base64や他の形式はそのまま維持
         regeneratedAssets.push(asset);
@@ -556,7 +636,7 @@ async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject>
     }
   }
   
-  console.log('アセットURL再生成完了:', regeneratedAssets.length, '個のアセット処理');
+  if (DEBUG_ASSETS) console.log('アセットURL再生成完了:', regeneratedAssets.length, '個のアセット処理');
   
   return {
     ...project,

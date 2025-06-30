@@ -1,10 +1,177 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 import { Input, Textarea, Button } from '../UI';
 import { ChoiceEditor } from './ChoiceEditor';
-import { Plus, Image, X, Music, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Image, X, Music, ChevronDown, ChevronUp, Crown, Upload } from 'lucide-react';
 import { generateId } from '../../utils';
 import { Asset } from '../../types';
+
+// タイトル画像アップローダーコンポーネント
+interface TitleImageUploaderProps {
+  availableImages: Asset[];
+  onImageSelect: (asset: Asset | null) => void;
+}
+
+const TitleImageUploader: React.FC<TitleImageUploaderProps> = ({ 
+  availableImages, 
+  onImageSelect 
+}) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addAssetWithFile } = useEditorStore();
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    
+    if (imageFile) {
+      await handleFileUpload(imageFile);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      handleFileUpload(file);
+    }
+    // ファイル入力をリセット
+    e.target.value = '';
+  };
+
+  const handleFileUpload = async (file: File) => {
+    try {
+      // 画像の寸法を取得
+      const dimensions = await getImageDimensions(file);
+      
+      // 重複を避けるためのユニークなファイル名を生成
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop() || '';
+      const baseName = file.name.replace(`.${fileExtension}`, '');
+      const uniqueName = `${baseName}_${timestamp}.${fileExtension}`;
+      
+      const newAsset: Asset = {
+        id: generateId(),
+        name: uniqueName,
+        type: 'image',
+        category: 'other', // タイトル画像は'other'カテゴリ
+        url: '', // addAssetWithFileで設定される
+        metadata: {
+          size: file.size,
+          format: file.type,
+          dimensions,
+          uploadedAt: new Date(),
+          lastUsed: new Date(),
+        },
+      };
+
+      const savedAsset = await addAssetWithFile(newAsset, file);
+      onImageSelect(savedAsset);
+      // タイトル画像アップロード成功（ログはデバッグ時のみ）
+    } catch (error) {
+      console.error('画像アップロードエラー:', error);
+      
+      // より詳細なエラーメッセージを表示
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('重複') || errorMessage.includes('uniqueness')) {
+        alert('同じ名前のファイルが既に存在します。別の名前で保存してください。');
+      } else {
+        alert(`画像のアップロードに失敗しました: ${errorMessage}`);
+      }
+    }
+  };
+
+  // 画像の寸法を取得するヘルパー関数
+  const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve, reject) => {
+      const img: HTMLImageElement = document.createElement('img');
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* ドラッグ&ドロップエリア */}
+      <div
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          isDragging
+            ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20'
+            : 'border-gray-300 bg-gray-50 dark:bg-gray-800'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          画像をドラッグ&ドロップするか、クリックしてファイルを選択
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          className="mb-3"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          ファイル選択
+        </Button>
+      </div>
+
+      {/* 既存画像から選択 */}
+      {availableImages.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            または既存の画像から選択:
+          </p>
+          <select
+            onChange={(e) => {
+              const asset = availableImages.find(a => a.id === e.target.value);
+              if (asset) onImageSelect(asset);
+            }}
+            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            defaultValue=""
+          >
+            <option value="">画像を選択...</option>
+            {availableImages.map(asset => (
+              <option key={asset.id} value={asset.id}>
+                {asset.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {availableImages.length === 0 && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+          まだ画像がアップロードされていません
+        </p>
+      )}
+    </div>
+  );
+};
 
 export const ParagraphEditor: React.FC = () => {
   const [isHeaderCollapsed, setIsHeaderCollapsed] = React.useState(false);
@@ -13,7 +180,8 @@ export const ParagraphEditor: React.FC = () => {
     currentProject, 
     selectedParagraphId, 
     updateParagraph,
-    addParagraph
+    addParagraph,
+    updateProject
   } = useEditorStore();
 
   const selectedParagraph = currentProject?.paragraphs.find(
@@ -69,8 +237,8 @@ export const ParagraphEditor: React.FC = () => {
     });
   };
 
-  const handleUpdateType = (type: 'start' | 'middle' | 'end') => {
-    const updatedChoices = type === 'end' ? [] : selectedParagraph.content.choices;
+  const handleUpdateType = (type: 'title' | 'start' | 'middle' | 'end') => {
+    const updatedChoices = (type === 'end' || type === 'title') ? [] : selectedParagraph.content.choices;
     updateParagraph(selectedParagraph.id, {
       type,
       content: {
@@ -146,12 +314,53 @@ export const ParagraphEditor: React.FC = () => {
     });
   };
 
+  // タイトルパラグラフ専用ハンドラー
+  const handleUpdateTitleImage = (asset: Asset | null) => {
+    updateParagraph(selectedParagraph.id, {
+      content: {
+        ...selectedParagraph.content,
+        titleImage: asset || undefined,
+      },
+    });
+  };
+
+  const handleUpdateShowProjectTitle = (showProjectTitle: boolean) => {
+    updateParagraph(selectedParagraph.id, {
+      content: {
+        ...selectedParagraph.content,
+        showProjectTitle,
+      },
+    });
+  };
+
+  const handleUpdateTitleColor = (titleColor: string) => {
+    updateParagraph(selectedParagraph.id, {
+      content: {
+        ...selectedParagraph.content,
+        titleColor,
+      },
+    });
+  };
+
+  const handleUpdateTitleFontSize = (titleFontSize: number) => {
+    updateParagraph(selectedParagraph.id, {
+      content: {
+        ...selectedParagraph.content,
+        titleFontSize,
+      },
+    });
+  };
+
   const availableBackgrounds = currentProject?.assets.filter(
     asset => asset.type === 'image' && (asset.category === 'background' || asset.category === 'other')
   ) || [];
 
   const availableBgm = currentProject?.assets.filter(
     asset => asset.type === 'audio' && (asset.category === 'bgm' || asset.category === 'other')
+  ) || [];
+
+  const availableImages = currentProject?.assets.filter(
+    asset => asset.type === 'image'
   ) || [];
 
   return (
@@ -183,13 +392,16 @@ export const ParagraphEditor: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  selectedParagraph.type === 'start' 
+                  selectedParagraph.type === 'title'
+                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
+                    : selectedParagraph.type === 'start' 
                     ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                     : selectedParagraph.type === 'end'
                     ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                     : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                 }`}>
-                  {selectedParagraph.type === 'start' ? 'スタート' : 
+                  {selectedParagraph.type === 'title' ? 'タイトル' :
+                   selectedParagraph.type === 'start' ? 'スタート' : 
                    selectedParagraph.type === 'end' ? 'エンド' : '中間'}
                 </div>
               </div>
@@ -255,9 +467,10 @@ export const ParagraphEditor: React.FC = () => {
                   </label>
                   <select
                     value={selectedParagraph.type}
-                    onChange={(e) => handleUpdateType(e.target.value as 'start' | 'middle' | 'end')}
+                    onChange={(e) => handleUpdateType(e.target.value as 'title' | 'start' | 'middle' | 'end')}
                     className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-all duration-200"
                   >
+                    <option value="title">タイトル</option>
                     <option value="start">スタート</option>
                     <option value="middle">中間</option>
                     <option value="end">エンド</option>
@@ -284,7 +497,7 @@ export const ParagraphEditor: React.FC = () => {
         </div>
 
         {/* 選択肢編集 */}
-        {selectedParagraph.type !== 'end' && (
+        {selectedParagraph.type !== 'end' && selectedParagraph.type !== 'title' && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
             <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
@@ -365,8 +578,9 @@ export const ParagraphEditor: React.FC = () => {
           </div>
         )}
 
-        {/* アセット設定 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+        {/* アセット設定 - タイトルパラグラフ以外で表示 */}
+        {selectedParagraph.type !== 'title' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
           <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
@@ -381,75 +595,77 @@ export const ParagraphEditor: React.FC = () => {
           
           <div style={{ padding: '2rem 3rem' }} className="space-y-8">
           
-          {/* 背景画像設定 */}
-          <div className="space-y-3">
-            <h3 className="text-md font-medium text-gray-800">背景画像</h3>
-            
-            {selectedParagraph.content.background ? (
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                {/* 画像プレビュー */}
-                <div className="mb-4">
-                  <div className="relative max-w-full">
-                    <img
-                      src={selectedParagraph.content.background.url}
-                      alt={selectedParagraph.content.background.name}
-                      className="w-full h-auto max-h-64 object-contain rounded border bg-gray-50"
-                      style={{ maxWidth: '100%' }}
-                    />
+          {/* 背景画像設定 - タイトルパラグラフ以外で表示 */}
+          {selectedParagraph.type !== 'title' && (
+            <div className="space-y-3">
+              <h3 className="text-md font-medium text-gray-800">背景画像</h3>
+              
+              {selectedParagraph.content.background ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  {/* 画像プレビュー */}
+                  <div className="mb-4">
+                    <div className="relative max-w-full">
+                      <img
+                        src={selectedParagraph.content.background.url}
+                        alt={selectedParagraph.content.background.name}
+                        className="w-full h-auto max-h-64 object-contain rounded border bg-gray-50"
+                        style={{ maxWidth: '100%' }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* メタデータと削除ボタン */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {selectedParagraph.content.background.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {selectedParagraph.content.background.metadata.dimensions ? 
+                          `${selectedParagraph.content.background.metadata.dimensions.width}×${selectedParagraph.content.background.metadata.dimensions.height}` : 
+                          'サイズ不明'}
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleUpdateBackground(null)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-                
-                {/* メタデータと削除ボタン */}
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {selectedParagraph.content.background.name}
-                    </p>
+              ) : (
+                <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Image className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-3">背景画像が設定されていません</p>
+                  {availableBackgrounds.length > 0 ? (
+                    <select
+                      onChange={(e) => {
+                        const asset = availableBackgrounds.find(a => a.id === e.target.value);
+                        if (asset) handleUpdateBackground(asset);
+                      }}
+                      className="block mx-auto px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      defaultValue=""
+                    >
+                      <option value="">画像を選択...</option>
+                      {availableBackgrounds.map(asset => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
                     <p className="text-xs text-gray-500">
-                      {selectedParagraph.content.background.metadata.dimensions ? 
-                        `${selectedParagraph.content.background.metadata.dimensions.width}×${selectedParagraph.content.background.metadata.dimensions.height}` : 
-                        'サイズ不明'}
+                      アセット管理から背景画像をアップロードしてください
                     </p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleUpdateBackground(null)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Image className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600 mb-3">背景画像が設定されていません</p>
-                {availableBackgrounds.length > 0 ? (
-                  <select
-                    onChange={(e) => {
-                      const asset = availableBackgrounds.find(a => a.id === e.target.value);
-                      if (asset) handleUpdateBackground(asset);
-                    }}
-                    className="block mx-auto px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    defaultValue=""
-                  >
-                    <option value="">画像を選択...</option>
-                    {availableBackgrounds.map(asset => (
-                      <option key={asset.id} value={asset.id}>
-                        {asset.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-xs text-gray-500">
-                    アセット管理から背景画像をアップロードしてください
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
-          {availableBackgrounds.length > 0 && selectedParagraph.content.background && (
+          {selectedParagraph.type !== 'title' && availableBackgrounds.length > 0 && selectedParagraph.content.background && (
             <div className="space-y-2">
               <p className="text-sm text-gray-600">他の背景画像に変更:</p>
               <select
@@ -471,73 +687,75 @@ export const ParagraphEditor: React.FC = () => {
             </div>
           )}
 
-          {/* BGM設定 */}
-          <div className="space-y-3">
-            <h3 className="text-md font-medium text-gray-800">BGM</h3>
-            
-            {selectedParagraph.content.bgm ? (
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start space-x-4">
-                  <div className="w-24 h-16 bg-gray-100 rounded border flex items-center justify-center">
-                    <Music className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {selectedParagraph.content.bgm.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {selectedParagraph.content.bgm.metadata.duration ? 
-                        `${Math.floor(selectedParagraph.content.bgm.metadata.duration / 60)}:${String(Math.floor(selectedParagraph.content.bgm.metadata.duration % 60)).padStart(2, '0')}` : 
-                        '長さ不明'}
-                    </p>
-                    <audio 
-                      controls 
-                      className="mt-2 w-full h-8"
-                      preload="metadata"
+          {/* BGM設定 - タイトルパラグラフ以外で表示 */}
+          {selectedParagraph.type !== 'title' && (
+            <div className="space-y-3">
+              <h3 className="text-md font-medium text-gray-800">BGM</h3>
+              
+              {selectedParagraph.content.bgm ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-24 h-16 bg-gray-100 rounded border flex items-center justify-center">
+                      <Music className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {selectedParagraph.content.bgm.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {selectedParagraph.content.bgm.metadata.duration ? 
+                          `${Math.floor(selectedParagraph.content.bgm.metadata.duration / 60)}:${String(Math.floor(selectedParagraph.content.bgm.metadata.duration % 60)).padStart(2, '0')}` : 
+                          '長さ不明'}
+                      </p>
+                      <audio 
+                        controls 
+                        className="mt-2 w-full h-8"
+                        preload="metadata"
+                      >
+                        <source src={selectedParagraph.content.bgm.url} />
+                        お使いのブラウザは音声再生に対応していません。
+                      </audio>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleUpdateBgm(null)}
                     >
-                      <source src={selectedParagraph.content.bgm.url} />
-                      お使いのブラウザは音声再生に対応していません。
-                    </audio>
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleUpdateBgm(null)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Music className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600 mb-3">BGMが設定されていません</p>
-                {availableBgm.length > 0 ? (
-                  <select
-                    onChange={(e) => {
-                      const asset = availableBgm.find(a => a.id === e.target.value);
-                      if (asset) handleUpdateBgm(asset);
-                    }}
-                    className="block mx-auto px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    defaultValue=""
-                  >
-                    <option value="">BGMを選択...</option>
-                    {availableBgm.map(asset => (
-                      <option key={asset.id} value={asset.id}>
-                        {asset.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-xs text-gray-500">
-                    アセット管理からBGMをアップロードしてください
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Music className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-3">BGMが設定されていません</p>
+                  {availableBgm.length > 0 ? (
+                    <select
+                      onChange={(e) => {
+                        const asset = availableBgm.find(a => a.id === e.target.value);
+                        if (asset) handleUpdateBgm(asset);
+                      }}
+                      className="block mx-auto px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      defaultValue=""
+                    >
+                      <option value="">BGMを選択...</option>
+                      {availableBgm.map(asset => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-gray-500">
+                      アセット管理からBGMをアップロードしてください
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
-          {availableBgm.length > 0 && selectedParagraph.content.bgm && (
+          {selectedParagraph.type !== 'title' && availableBgm.length > 0 && selectedParagraph.content.bgm && (
             <div className="space-y-2">
               <p className="text-sm text-gray-600">他のBGMに変更:</p>
               <select
@@ -559,10 +777,283 @@ export const ParagraphEditor: React.FC = () => {
             </div>
           )}
           </div>
-        </div>
+          </div>
+        )}
 
-        {/* 下部余白 - スクロール時の視認性確保 */}
-        <div className="h-24"></div>
+        {/* タイトルパラグラフ専用設定 */}
+        {selectedParagraph.type === 'title' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+            <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Crown className="w-5 h-5 text-purple-600" />
+                タイトル画面設定
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                タイトル画面専用の設定を行います
+              </p>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* タイトル画像設定 */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Image className="w-4 h-4 inline mr-2" />
+                  タイトル画像
+                </label>
+                
+                {selectedParagraph.content.titleImage ? (
+                  <div className="space-y-3">
+                    <div className="relative max-w-full">
+                      <img
+                        src={selectedParagraph.content.titleImage.url}
+                        alt={selectedParagraph.content.titleImage.name}
+                        className="w-full h-auto max-h-64 object-contain rounded border bg-gray-50"
+                        style={{ maxWidth: '100%' }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {selectedParagraph.content.titleImage.name}
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleUpdateTitleImage(null)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <TitleImageUploader
+                    availableImages={availableImages}
+                    onImageSelect={handleUpdateTitleImage}
+                  />
+                )}
+              </div>
+
+              {/* タイトル画像変更セレクト */}
+              {availableImages.length > 0 && selectedParagraph.content.titleImage && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">他のタイトル画像に変更:</p>
+                  <select
+                    onChange={(e) => {
+                      const asset = availableImages.find(a => a.id === e.target.value);
+                      if (asset && asset.id !== selectedParagraph.content.titleImage?.id) {
+                        handleUpdateTitleImage(asset);
+                      }
+                    }}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    value={selectedParagraph.content.titleImage.id}
+                  >
+                    {availableImages.map(asset => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* プロジェクトタイトル表示設定 */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="showProjectTitle"
+                    checked={selectedParagraph.content.showProjectTitle ?? true}
+                    onChange={(e) => handleUpdateShowProjectTitle(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <label htmlFor="showProjectTitle" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    プロジェクトタイトルを表示する
+                  </label>
+                </div>
+
+                {(selectedParagraph.content.showProjectTitle ?? true) && (
+                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          タイトル色
+                        </label>
+                        <input
+                          type="color"
+                          value={selectedParagraph.content.titleColor || '#ffffff'}
+                          onChange={(e) => handleUpdateTitleColor(e.target.value)}
+                          className="w-full h-10 border border-gray-300 dark:border-gray-600 rounded cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          フォントサイズ (px)
+                        </label>
+                        <Input
+                          type="number"
+                          value={selectedParagraph.content.titleFontSize || 48}
+                          onChange={(e) => handleUpdateTitleFontSize(parseInt(e.target.value) || 48)}
+                          min="12"
+                          max="120"
+                          className="w-full"
+                          placeholder="48"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* タイトルBGM設定 */}
+              <div className="space-y-3">
+                <h4 className="text-md font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                  <Music className="w-4 h-4" />
+                  タイトルBGM
+                </h4>
+                
+                {currentProject?.settings?.titleScreen?.bgm ? (
+                  <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-16 h-12 bg-gray-100 dark:bg-gray-600 rounded border flex items-center justify-center">
+                        <Music className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {currentProject.settings.titleScreen.bgm.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {currentProject.settings.titleScreen.bgm.metadata.duration ? 
+                            `${Math.floor(currentProject.settings.titleScreen.bgm.metadata.duration / 60)}:${String(Math.floor(currentProject.settings.titleScreen.bgm.metadata.duration % 60)).padStart(2, '0')}` : 
+                            '長さ不明'}
+                        </p>
+                        <audio 
+                          controls 
+                          className="mt-2 w-full h-8"
+                          preload="metadata"
+                        >
+                          <source src={currentProject.settings.titleScreen.bgm.url} />
+                          お使いのブラウザは音声再生に対応していません。
+                        </audio>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          if (currentProject) {
+                            updateProject({
+                              settings: {
+                                ...currentProject.settings,
+                                titleScreen: {
+                                  backgroundImage: undefined,
+                                  titleImage: undefined,
+                                  bgm: undefined,
+                                  showProjectTitle: true,
+                                  titlePosition: 'center',
+                                  titleColor: '#ffffff',
+                                  titleFontSize: 48,
+                                  ...currentProject.settings?.titleScreen,
+                                  bgm: undefined
+                                }
+                              }
+                            });
+                          }
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                    <Music className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">タイトルBGMが設定されていません</p>
+                    {availableBgm.length > 0 ? (
+                      <select
+                        onChange={(e) => {
+                          const asset = availableBgm.find(a => a.id === e.target.value);
+                          if (asset && currentProject) {
+                            updateProject({
+                              settings: {
+                                ...currentProject.settings,
+                                titleScreen: {
+                                  backgroundImage: undefined,
+                                  titleImage: undefined,
+                                  bgm: undefined,
+                                  showProjectTitle: true,
+                                  titlePosition: 'center',
+                                  titleColor: '#ffffff',
+                                  titleFontSize: 48,
+                                  ...currentProject.settings?.titleScreen,
+                                  bgm: asset
+                                }
+                              }
+                            });
+                          }
+                        }}
+                        className="block mx-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        defaultValue=""
+                      >
+                        <option value="">タイトルBGMを選択...</option>
+                        {availableBgm.map(asset => (
+                          <option key={asset.id} value={asset.id}>
+                            {asset.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        アセット管理からBGMをアップロードしてください
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {availableBgm.length > 0 && currentProject?.settings?.titleScreen?.bgm && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">他のBGMに変更:</p>
+                  <select
+                    onChange={(e) => {
+                      const asset = availableBgm.find(a => a.id === e.target.value);
+                      if (asset && asset.id !== currentProject?.settings?.titleScreen?.bgm?.id && currentProject) {
+                        updateProject({
+                          settings: {
+                            ...currentProject.settings,
+                            titleScreen: {
+                              backgroundImage: undefined,
+                              titleImage: undefined,
+                              bgm: undefined,
+                              showProjectTitle: true,
+                              titlePosition: 'center',
+                              titleColor: '#ffffff',
+                              titleFontSize: 48,
+                              ...currentProject.settings?.titleScreen,
+                              bgm: asset
+                            }
+                          }
+                        });
+                      }
+                    }}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    value={currentProject.settings.titleScreen.bgm.id}
+                  >
+                    {availableBgm.map(asset => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 下部余白 - 視覚的圧迫感軽減 */}
+        <div className="h-20"></div>
       </div>
     </div>
   );
