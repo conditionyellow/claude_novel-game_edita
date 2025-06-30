@@ -62,7 +62,7 @@ export const Sidebar: React.FC = () => {
     <div className="editor-sidebar">
       {/* Header Section */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             パラグラフ
           </h2>
@@ -72,9 +72,6 @@ export const Sidebar: React.FC = () => {
             </span>
           </div>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          シーンを編集・管理
-        </p>
       </div>
       
       {/* Paragraph List */}
@@ -93,7 +90,7 @@ export const Sidebar: React.FC = () => {
               onClick={() => handleSelectParagraph(paragraph.id)}
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0" style={{marginLeft: '5px'}}>
                   {/* Type Badge */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className={clsx(
