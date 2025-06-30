@@ -79,7 +79,6 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
               id: nanoid(),
               name: file.name,
               url: result,
-              type: file.type.startsWith('image/') ? 'image' : 'audio',
               category: options.category,
               metadata: {
                 size: file.size,
@@ -99,7 +98,6 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
             id: nanoid(),
             name: file.name,
             url: result,
-            type: 'audio',
             category: options.category,
             metadata: {
               size: file.size,

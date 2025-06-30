@@ -38,8 +38,8 @@ export const AssetManager: React.FC<AssetManagerProps> = ({
   const getAssetCounts = () => {
     const counts = {
       total: assets.length,
-      images: assets.filter(a => a.type === 'image').length,
-      audio: assets.filter(a => a.type === 'audio').length,
+      images: assets.filter(a => ['background', 'character', 'other'].includes(a.category)).length,
+      audio: assets.filter(a => ['bgm', 'se'].includes(a.category)).length,
       categories: {
         background: assets.filter(a => a.category === 'background').length,
         character: assets.filter(a => a.category === 'character').length,
@@ -65,8 +65,8 @@ export const AssetManager: React.FC<AssetManagerProps> = ({
   return (
     <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
       {/* ヘッダー */}
-      <div className="border-b border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-1">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
               {mode === 'select' ? 'アセットを選択' : 'アセット管理'}
@@ -87,44 +87,33 @@ export const AssetManager: React.FC<AssetManagerProps> = ({
           )}
         </div>
 
-        {/* 統計情報 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <Folder className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-600">総数</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{counts.total}</p>
+        {/* 統計情報 - 横一列表示 */}
+        <div style={{margin: '3px 32px', marginTop: '3px', marginBottom: '3px'}} className="flex items-center justify-between bg-blue-50 rounded-xl border border-blue-200">
+          <div style={{padding: '8px', margin: '2px'}} className="flex items-center gap-4 text-base text-gray-700 bg-white rounded-lg shadow-sm">
+            <Folder className="w-5 h-5" />
+            <span style={{marginRight: '8px'}}>総数</span>
+            <span className="font-bold text-gray-900">{counts.total}</span>
           </div>
-          
-          <div className="bg-blue-50 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-600">画像</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-900">{counts.images}</p>
+          <div style={{padding: '8px', margin: '2px'}} className="flex items-center gap-4 text-base text-gray-700 bg-white rounded-lg shadow-sm">
+            <ImageIcon className="w-5 h-5" />
+            <span style={{marginRight: '8px'}}>画像</span>
+            <span className="font-bold text-gray-900">{counts.images}</span>
           </div>
-          
-          <div className="bg-purple-50 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-600">音声</span>
-            </div>
-            <p className="text-2xl font-bold text-purple-900">{counts.audio}</p>
+          <div style={{padding: '8px', margin: '2px'}} className="flex items-center gap-4 text-base text-gray-700 bg-white rounded-lg shadow-sm">
+            <Volume2 className="w-5 h-5" />
+            <span style={{marginRight: '8px'}}>音声</span>
+            <span className="font-bold text-gray-900">{counts.audio}</span>
           </div>
-          
-          <div className="bg-green-50 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-600">背景</span>
-            </div>
-            <p className="text-2xl font-bold text-green-900">{counts.categories.background}</p>
+          <div style={{padding: '8px', margin: '2px'}} className="flex items-center gap-4 text-base text-gray-700 bg-white rounded-lg shadow-sm">
+            <ImageIcon className="w-5 h-5" />
+            <span style={{marginRight: '8px'}}>背景</span>
+            <span className="font-bold text-gray-900">{counts.categories.background}</span>
           </div>
         </div>
 
         {/* タブナビゲーション */}
         {mode === 'manage' && (
-          <div className="flex gap-4 mt-6">
+          <div className="flex gap-4 mt-1">
             <button
               onClick={() => setActiveTab('library')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -150,7 +139,7 @@ export const AssetManager: React.FC<AssetManagerProps> = ({
       </div>
 
       {/* コンテンツエリア */}
-      <div className="p-6">
+      <div className="p-4">
         {activeTab === 'library' || mode === 'select' ? (
           <AssetLibrary
             assets={assets}

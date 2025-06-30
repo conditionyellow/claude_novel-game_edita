@@ -7,7 +7,6 @@ export interface Asset {
   id: string;
   name: string;
   url: string;
-  type: 'image' | 'audio';
   category: 'background' | 'character' | 'bgm' | 'se' | 'other';
   metadata: AssetMetadata;
 }
@@ -41,7 +40,6 @@ export interface AssetValidationResult {
 }
 
 export interface AssetLibraryFilter {
-  type?: Asset['type'];
   category?: Asset['category'];
   searchTerm?: string;
   sortBy?: 'name' | 'uploadedAt' | 'lastUsed' | 'size';
@@ -57,7 +55,15 @@ export interface AssetManagerState {
   previewAsset: Asset | null;
 }
 
-export type AssetType = Asset['type'];
 export type AssetCategory = Asset['category'];
 export type AssetSortField = AssetLibraryFilter['sortBy'];
 export type SortOrder = AssetLibraryFilter['sortOrder'];
+
+// Helper function to determine if asset is image or audio based on category
+export const isImageAsset = (category: AssetCategory): boolean => {
+  return ['background', 'character', 'other'].includes(category);
+};
+
+export const isAudioAsset = (category: AssetCategory): boolean => {
+  return ['bgm', 'se'].includes(category);
+};

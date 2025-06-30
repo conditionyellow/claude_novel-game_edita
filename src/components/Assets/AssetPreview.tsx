@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Play, Pause, Volume2, VolumeX, Download, Info } from 'lucide-react';
-import { Asset } from '../../types';
+import { Asset, isImageAsset, isAudioAsset } from '../../types';
 import { Button } from '../UI';
 
 interface AssetPreviewProps {
@@ -181,7 +181,7 @@ export const AssetPreview: React.FC<AssetPreviewProps> = ({
         <div className="flex flex-col lg:flex-row max-h-[calc(95vh-120px)] overflow-hidden">
           {/* メインコンテンツ */}
           <div className="flex-1 p-6 flex items-center justify-center min-h-0">
-            {asset.type === 'image' ? (
+            {isImageAsset(asset.category) ? (
               // 画像プレビュー
               <div className="w-full h-full flex items-center justify-center">
                 <div 

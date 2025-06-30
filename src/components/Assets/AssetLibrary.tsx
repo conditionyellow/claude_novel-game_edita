@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Grid, List, Filter, Play, Pause, Volume2, Image as ImageIcon, Trash2 } from 'lucide-react';
-import { Asset, AssetLibraryFilter } from '../../types';
+import { Asset, AssetLibraryFilter, isImageAsset, isAudioAsset } from '../../types';
 import { Button, Input } from '../UI';
 import { AssetPreview } from './AssetPreview';
 
@@ -31,11 +31,6 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
   // フィルタリング・ソート処理
   const filteredAssets = useMemo(() => {
     let filtered = [...assets];
-
-    // タイプフィルタ
-    if (filter.type) {
-      filtered = filtered.filter(asset => asset.type === filter.type);
-    }
 
     // カテゴリフィルタ
     if (filter.category) {
@@ -145,16 +140,6 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
         {/* フィルタ */}
         <div className="flex gap-4 flex-wrap">
           <select
-            value={filter.type || ''}
-            onChange={(e) => handleFilterChange({ type: e.target.value as Asset['type'] || undefined })}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">すべてのタイプ</option>
-            <option value="image">画像</option>
-            <option value="audio">音声</option>
-          </select>
-
-          <select
             value={filter.category || ''}
             onChange={(e) => handleFilterChange({ category: e.target.value as Asset['category'] || undefined })}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -204,7 +189,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
       ) : (
         <div className={
           viewMode === 'grid' 
-            ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
+            ? 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3'
             : 'space-y-2'
         }>
           {filteredAssets.map((asset) => (
@@ -226,36 +211,37 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 // グリッドビュー
                 <>
                   {/* プレビュー */}
-                  <div className="w-full max-w-[300px] bg-gray-100 flex items-center justify-center overflow-hidden mx-auto">
-                    {asset.type === 'image' ? (
+                  <div className="w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+                    {isImageAsset(asset.category) ? (
                       <img 
                         src={asset.url} 
                         alt={asset.name}
-                        className="max-w-[300px] w-full h-auto object-contain hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
                     ) : (
-                      <Volume2 className="w-8 h-8 text-gray-400" />
+                      <Volume2 className="w-6 h-6 text-gray-400" />
                     )}
                   </div>
 
                   {/* 情報 */}
-                  <div className="p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(asset.category)}`}>
+                  <div className="p-2">
+                    <div className="flex items-center justify-center mb-1">
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getCategoryColor(asset.category)}`}>
                         {getCategoryLabel(asset.category)}
                       </span>
                     </div>
-                    <h3 className="font-medium text-sm text-gray-900 truncate mb-0.5" title={asset.name}>
+                    <h3 className="font-medium text-xs text-gray-900 truncate mb-0.5 text-center" title={asset.name}>
                       {asset.name}
                     </h3>
-                    <p className="text-xs text-gray-500">{formatFileSize(asset.metadata.size)}</p>
+                    <p className="text-xs text-gray-500 text-center">{formatFileSize(asset.metadata.size)}</p>
                   </div>
 
                   {/* ホバー時のアクション */}
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1">
                     <Button
                       size="sm"
+                      className="text-xs px-2 py-1"
                       onClick={(e) => {
                         e.stopPropagation();
                         setPreviewAsset(asset);
@@ -267,6 +253,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                       <Button
                         variant="secondary"
                         size="sm"
+                        className="text-xs px-2 py-1"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (confirm('このアセットを削除しますか？')) {
@@ -274,7 +261,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                           }
                         }}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     )}
                   </div>
@@ -292,7 +279,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                     }}
                     title="クリックして大きなプレビューを表示"
                   >
-                    {asset.type === 'image' ? (
+                    {isImageAsset(asset.category) ? (
                       <img 
                         src={asset.url} 
                         alt={asset.name}

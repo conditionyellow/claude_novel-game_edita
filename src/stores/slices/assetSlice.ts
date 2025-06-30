@@ -4,7 +4,7 @@
  */
 
 import type { StateCreator } from 'zustand';
-import type { Asset, AssetCategory, AssetType } from '../../types';
+import type { Asset, AssetCategory } from '../../types';
 import { assetStorage } from '../../utils/assetStorageManager';
 
 export interface AssetSlice {
@@ -14,7 +14,7 @@ export interface AssetSlice {
   updateAsset: (id: string, updates: Partial<Asset>) => void;
   deleteAsset: (id: string) => Promise<void>;
   getAssetsByCategory: (category: AssetCategory) => Asset[];
-  getAssetsByType: (type: AssetType) => Asset[];
+  getAssetsByType: (type: 'image' | 'audio') => Asset[];
   loadProjectAssets: (projectId: string) => Promise<void>;
   getAssetUrl: (assetId: string) => Promise<string>;
 }
@@ -181,10 +181,14 @@ export const createAssetSlice: StateCreator<
     return currentProject.assets.filter(asset => asset.category === category);
   },
 
-  getAssetsByType: (type: AssetType) => {
+  getAssetsByType: (type: 'image' | 'audio') => {
     const { currentProject } = get();
     if (!currentProject) return [];
-    return currentProject.assets.filter(asset => asset.type === type);
+    if (type === 'image') {
+      return currentProject.assets.filter(asset => ['background', 'character', 'other'].includes(asset.category));
+    } else {
+      return currentProject.assets.filter(asset => ['bgm', 'se'].includes(asset.category));
+    }
   },
 
   loadProjectAssets: async (projectId: string) => {

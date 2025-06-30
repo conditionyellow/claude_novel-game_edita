@@ -71,8 +71,8 @@ export class DebugLogger {
 
     // アセットの統計
     const assetStats = {
-      images: project.assets.filter(a => a.type === 'image').length,
-      audio: project.assets.filter(a => a.type === 'audio').length,
+      images: project.assets.filter(a => ['background', 'character', 'other'].includes(a.category)).length,
+      audio: project.assets.filter(a => ['bgm', 'se'].includes(a.category)).length,
       totalSize: Math.round(
         project.assets.reduce((sum, a) => sum + a.metadata.size, 0) / 1024 / 1024
       ),

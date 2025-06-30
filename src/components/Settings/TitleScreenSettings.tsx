@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useEditorStore } from '../../stores/editorStore';
 import { Button, Input } from '../UI';
-import { TitleScreenSettings as TitleScreenSettingsType, Asset } from '../../types';
+import { TitleScreenSettings as TitleScreenSettingsType, Asset, isImageAsset, isAudioAsset } from '../../types';
 import { Image, Music, X, Upload } from 'lucide-react';
 
 interface TitleScreenSettingsProps {
@@ -41,11 +41,11 @@ export const TitleScreenSettings: React.FC<TitleScreenSettingsProps> = ({ onClos
   }, []);
 
   const backgroundImages = getAssetsByCategory('background').concat(
-    getAssetsByCategory('other').filter(asset => asset.type === 'image')
+    getAssetsByCategory('other').filter(asset => isImageAsset(asset.category))
   );
-  const titleImages = getAssetsByType('image');
+  const titleImages = currentProject?.assets.filter(asset => isImageAsset(asset.category)) || [];
   const bgmAssets = getAssetsByCategory('bgm').concat(
-    getAssetsByCategory('other').filter(asset => asset.type === 'audio')
+    getAssetsByCategory('other').filter(asset => isAudioAsset(asset.category))
   );
 
   const handleSave = () => {

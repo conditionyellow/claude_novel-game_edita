@@ -34,7 +34,7 @@ interface EditorStore extends EditorState {
   updateAsset: (id: string, updates: Partial<Asset>) => void;
   deleteAsset: (id: string) => void;
   getAssetsByCategory: (category: Asset['category']) => Asset[];
-  getAssetsByType: (type: Asset['type']) => Asset[];
+  getAssetsByType: (type: 'image' | 'audio') => Asset[];
   loadProjectAssets: (projectId: string) => Promise<void>; // IndexedDBからアセット読み込み
   getAssetUrl: (assetId: string) => Promise<string>; // アセットURL取得
   
@@ -451,10 +451,14 @@ export const useEditorStore = create<EditorStore>()(
           return currentProject.assets.filter(asset => asset.category === category);
         },
 
-        getAssetsByType: (type: Asset['type']) => {
+        getAssetsByType: (type: 'image' | 'audio') => {
           const { currentProject } = get();
           if (!currentProject) return [];
-          return currentProject.assets.filter(asset => asset.type === type);
+          if (type === 'image') {
+            return currentProject.assets.filter(asset => ['background', 'character', 'other'].includes(asset.category));
+          } else {
+            return currentProject.assets.filter(asset => ['bgm', 'se'].includes(asset.category));
+          }
         },
 
         // IndexedDBからプロジェクトのアセット一覧を読み込み
@@ -531,7 +535,6 @@ export const useEditorStore = create<EditorStore>()(
                 console.log(`アセット ${index + 1}:`, {
                   id: asset.id,
                   name: asset.name,
-                  type: asset.type,
                   category: asset.category,
                   url: asset.url ? asset.url.substring(0, 50) + '...' : 'なし',
                   hasMetadata: !!asset.metadata

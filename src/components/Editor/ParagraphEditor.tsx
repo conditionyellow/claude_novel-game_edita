@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 // useAssetRepair は Phase 20 でグローバルマネージャーに統合済み
 import { globalAssetUrlManager } from '../../utils/globalAssetUrlManager';
@@ -6,7 +6,7 @@ import { Input, Textarea, Button } from '../UI';
 import { ChoiceEditor } from './ChoiceEditor';
 import { Plus, Image, X, Music, ChevronDown, ChevronUp, Crown, Upload } from 'lucide-react';
 import { generateId } from '../../utils';
-import { Asset } from '../../types';
+import { Asset, isImageAsset, isAudioAsset } from '../../types';
 
 // タイトル画像アップローダーコンポーネント
 interface TitleImageUploaderProps {
@@ -67,7 +67,6 @@ const TitleImageUploader: React.FC<TitleImageUploaderProps> = ({
       const newAsset: Asset = {
         id: generateId(),
         name: uniqueName,
-        type: 'image',
         category: 'other', // タイトル画像は'other'カテゴリ
         url: '', // addAssetWithFileで設定される
         metadata: {
@@ -566,15 +565,15 @@ export const ParagraphEditor: React.FC = () => {
   };
 
   const availableBackgrounds = currentProject?.assets.filter(
-    asset => asset.type === 'image' && (asset.category === 'background' || asset.category === 'other')
+    asset => isImageAsset(asset.category) && (asset.category === 'background' || asset.category === 'other')
   ) || [];
 
   const availableBgm = currentProject?.assets.filter(
-    asset => asset.type === 'audio' && (asset.category === 'bgm' || asset.category === 'other')
+    asset => isAudioAsset(asset.category) && (asset.category === 'bgm' || asset.category === 'other')
   ) || [];
 
   const availableImages = currentProject?.assets.filter(
-    asset => asset.type === 'image'
+    asset => isImageAsset(asset.category)
   ) || [];
 
   return (

@@ -12,11 +12,13 @@ export type {
   AssetValidationResult,
   AssetLibraryFilter,
   AssetManagerState,
-  AssetType,
   AssetCategory,
   AssetSortField,
   SortOrder,
 } from './asset';
+
+// アセット関連ユーティリティ関数
+export { isImageAsset, isAudioAsset } from './asset';
 
 // ストーリー関連
 export type {
