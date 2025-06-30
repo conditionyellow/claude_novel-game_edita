@@ -277,6 +277,33 @@ export class GameBuilder {
     </script>
     
     <script>
+        // コンテンツ保護機能
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        document.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // キーボードショートカット無効化（開発者ツール防止）
+        document.addEventListener('keydown', function(e) {
+            // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U を無効化
+            if (e.keyCode === 123 || 
+                (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
+                (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
         ${this.generateInlineRuntime()}
     </script>
 </body>
@@ -1092,6 +1119,13 @@ class GameEngine {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    /* コンテンツ保護 */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -1099,6 +1133,11 @@ body {
     background: #000;
     color: #fff;
     overflow: hidden;
+    /* コンテンツ保護 */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 #game-container {
@@ -1179,6 +1218,17 @@ body {
     object-fit: contain;
     border-radius: 10px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    /* 画像保護 */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    pointer-events: none;
 }
 
 .project-title-container {
@@ -1251,6 +1301,12 @@ body {
     background-repeat: no-repeat;
     background-color: #1a1a1a;
     z-index: 1;
+    /* 画像保護 */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    pointer-events: none;
 }
 
 .game-ui {
