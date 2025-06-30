@@ -4,7 +4,7 @@ import { useEditorStore } from '../../stores/editorStore';
 import { globalAssetUrlManager } from '../../utils/globalAssetUrlManager';
 import { Input, Textarea, Button } from '../UI';
 import { ChoiceEditor } from './ChoiceEditor';
-import { Plus, Image, X, Music, ChevronDown, ChevronUp, Crown, Upload } from 'lucide-react';
+import { Plus, Image, X, Music, Crown, Upload } from 'lucide-react';
 import { generateId } from '../../utils';
 import { Asset, isImageAsset, isAudioAsset } from '../../types';
 
@@ -177,7 +177,6 @@ const TitleImageUploader: React.FC<TitleImageUploaderProps> = ({
 // Phase 20: 旧検証システム削除完了 - グローバルアセットURL管理システムに統合済み
 
 export const ParagraphEditor: React.FC = () => {
-  const [isHeaderCollapsed, setIsHeaderCollapsed] = React.useState(false);
   const [validatedBackgroundAsset, setValidatedBackgroundAsset] = useState<Asset | null>(null);
   const [validatedTitleImageAsset, setValidatedTitleImageAsset] = useState<Asset | null>(null);
   const [validatedBgmAsset, setValidatedBgmAsset] = useState<Asset | null>(null);
@@ -579,29 +578,14 @@ export const ParagraphEditor: React.FC = () => {
   return (
     <div className="flex-1 overflow-y-auto h-full bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-16 py-8 space-y-8 min-h-full paragraph-editor-container">
-        {/* 折りたたみ可能なヘッダー */}
+        {/* ヘッダー */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div 
-            className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
-          >
+          <div className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  {isHeaderCollapsed ? (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  )}
-                  <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    パラグラフ編集
-                  </h1>
-                </div>
-                {isHeaderCollapsed && (
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedParagraph.title}
-                  </span>
-                )}
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100" style={{marginLeft: '5px'}}>
+                  パラグラフ編集
+                </h2>
               </div>
               <div className="flex items-center gap-2">
                 <div className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -620,40 +604,10 @@ export const ParagraphEditor: React.FC = () => {
               </div>
             </div>
           </div>
-          
-          {!isHeaderCollapsed && (
-            <div className="px-8 pb-8 animate-slide-in">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                選択中: <span className="font-medium">{selectedParagraph.title}</span>
-              </p>
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-500 dark:text-gray-400">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                  選択肢: {selectedParagraph.content.choices.length}個
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                  文字数: {selectedParagraph.content.text.length}
-                </div>
-                {selectedParagraph.content.background && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full" />
-                    背景画像あり
-                  </div>
-                )}
-                {selectedParagraph.content.bgm && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full" />
-                    BGMあり
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 基本情報 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
@@ -711,17 +665,14 @@ export const ParagraphEditor: React.FC = () => {
 
         {/* 選択肢編集 */}
         {selectedParagraph.type !== 'end' && selectedParagraph.type !== 'title' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
                     <Plus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">選択肢</h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">最大5個まで追加可能</p>
-                  </div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">選択肢</h2>
                 </div>
                 <Button
                   variant="secondary"
@@ -793,16 +744,13 @@ export const ParagraphEditor: React.FC = () => {
 
         {/* アセット設定 - タイトルパラグラフ以外で表示 */}
         {selectedParagraph.type !== 'title' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
                 <Music className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">アセット</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">背景画像やBGMを設定</p>
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">アセット</h2>
             </div>
           </div>
           
@@ -1011,15 +959,14 @@ export const ParagraphEditor: React.FC = () => {
 
         {/* タイトルパラグラフ専用設定 */}
         {selectedParagraph.type === 'title' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ margin: '0 2rem' }}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <Crown className="w-5 h-5 text-purple-600" />
-                タイトル画面設定
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                タイトル画面専用の設定を行います
-              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                  <Crown className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">タイトル画面設定</h3>
+              </div>
             </div>
 
             <div className="p-8 space-y-6">
