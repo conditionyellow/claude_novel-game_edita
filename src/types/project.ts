@@ -19,11 +19,22 @@ export interface ProjectResolution {
   height: number;
 }
 
+export interface TitleScreenSettings {
+  backgroundImage?: Asset;
+  titleImage?: Asset;
+  bgm?: Asset;
+  showProjectTitle: boolean;
+  titlePosition: 'top' | 'center' | 'bottom';
+  titleColor: string;
+  titleFontSize: number;
+}
+
 export interface ProjectSettings {
   defaultFont: string;
   defaultFontSize: number;
   themeColors: ThemeColors;
   resolution: ProjectResolution;
+  titleScreen: TitleScreenSettings;
 }
 
 export interface ProjectMetadata {

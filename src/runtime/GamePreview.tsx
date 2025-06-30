@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Paragraph, NovelProject } from '../types';
+import { Paragraph, NovelProject, Asset } from '../types';
 import { Play, RotateCcw, Home } from 'lucide-react';
 import { Button } from '../components/UI';
+import { globalAssetUrlManager } from '../utils/globalAssetUrlManager';
 
 interface GamePreviewProps {
   project: NovelProject;
@@ -13,6 +14,25 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const titleAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [stableAssetUrls, setStableAssetUrls] = useState<Map<string, string>>(new Map());
+
+  // プロジェクト変更時にアセットURLを事前取得
+  useEffect(() => {
+    const loadStableUrls = async () => {
+      if (project && project.assets.length > 0) {
+        try {
+          console.log('🎮 ゲームプレビュー: 安定URLの事前取得開始');
+          const urlMap = await globalAssetUrlManager.getStableUrls(project.id, project.assets);
+          setStableAssetUrls(urlMap);
+          console.log(`✅ ゲームプレビュー: ${urlMap.size}個のアセットURL取得完了`);
+        } catch (error) {
+          console.error('❌ ゲームプレビュー: アセットURL取得エラー:', error);
+        }
+      }
+    };
+
+    loadStableUrls();
+  }, [project]);
 
   // ゲーム開始時に最初のパラグラフを設定
   useEffect(() => {
@@ -21,6 +41,19 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
       setCurrentParagraph(startParagraph);
     }
   }, [project]);
+
+  // 安定URLを取得するヘルパー関数
+  const getStableAssetUrl = (asset: Asset | undefined): string | undefined => {
+    if (!asset) return undefined;
+    
+    const stableUrl = stableAssetUrls.get(asset.id);
+    if (stableUrl) {
+      return stableUrl;
+    }
+    
+    // フォールバック: 元のURL
+    return asset.url;
+  };
 
   // BGM制御のuseEffect
   useEffect(() => {
@@ -47,7 +80,12 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
       
       if (titleAudioRef.current) {
         if (titleBgm) {
-          playBgm(titleBgm.url, titleAudioRef.current);
+          const stableUrl = getStableAssetUrl(titleBgm);
+          if (stableUrl) {
+            playBgm(stableUrl, titleAudioRef.current);
+          } else {
+            stopBgm(titleAudioRef.current);
+          }
         } else {
           stopBgm(titleAudioRef.current);
         }
@@ -61,7 +99,12 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
       // ゲーム中のBGM制御
       if (audioRef.current) {
         if (currentParagraph.content.bgm) {
-          playBgm(currentParagraph.content.bgm.url, audioRef.current);
+          const stableUrl = getStableAssetUrl(currentParagraph.content.bgm);
+          if (stableUrl) {
+            playBgm(stableUrl, audioRef.current);
+          } else {
+            stopBgm(audioRef.current);
+          }
         } else {
           stopBgm(audioRef.current);
         }
@@ -72,7 +115,7 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
         stopBgm(titleAudioRef.current);
       }
     }
-  }, [currentParagraph, isGameStarted, project]);
+  }, [currentParagraph, isGameStarted, project, stableAssetUrls]);
 
   const startGame = () => {
     // タイトルBGM停止
@@ -145,10 +188,10 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-900 relative">
         {/* 背景画像（タイトルパラグラフから） */}
-        {titleParagraph?.content.background && (
+        {titleParagraph?.content.background && getStableAssetUrl(titleParagraph.content.background) && (
           <div className="absolute inset-0 z-0">
             <img
-              src={titleParagraph.content.background.url}
+              src={getStableAssetUrl(titleParagraph.content.background)}
               alt={titleParagraph.content.background.name}
               className="w-full h-full"
               style={{
@@ -164,10 +207,10 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
         
         <div className="relative z-10 flex flex-col items-center justify-center max-w-4xl w-full mx-4 text-center">
           {/* タイトル画像（タイトルパラグラフから） */}
-          {titleParagraph?.content.titleImage && (
+          {titleParagraph?.content.titleImage && getStableAssetUrl(titleParagraph.content.titleImage) && (
             <div className="mb-8">
               <img
-                src={titleParagraph.content.titleImage.url}
+                src={getStableAssetUrl(titleParagraph.content.titleImage)}
                 alt={titleParagraph.content.titleImage.name}
                 className="max-w-full max-h-96 object-contain"
               />
@@ -206,12 +249,15 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
                 const titleParagraph = project.paragraphs.find(p => p.type === 'title');
                 const titleBgm = project.settings?.titleScreen?.bgm || titleParagraph?.content.bgm;
                 if (titleBgm && titleAudioRef.current) {
-                  titleAudioRef.current.src = titleBgm.url;
-                  titleAudioRef.current.loop = true;
-                  titleAudioRef.current.volume = 0.7;
-                  titleAudioRef.current.play().catch(error => {
-                    console.log('Title BGM play failed:', error);
-                  });
+                  const stableUrl = getStableAssetUrl(titleBgm);
+                  if (stableUrl) {
+                    titleAudioRef.current.src = stableUrl;
+                    titleAudioRef.current.loop = true;
+                    titleAudioRef.current.volume = 0.7;
+                    titleAudioRef.current.play().catch(error => {
+                      console.log('Title BGM play failed:', error);
+                    });
+                  }
                 }
                 // 少し遅延してからゲーム開始（BGM開始後）
                 setTimeout(() => startGame(), 100);
@@ -292,9 +338,9 @@ export const GamePreview: React.FC<GamePreviewProps> = ({ project }) => {
           
           {/* 背景画像エリア（全画面表示） */}
           <div className="absolute inset-0 bg-gray-700 z-0">
-            {currentParagraph.content.background ? (
+            {currentParagraph.content.background && getStableAssetUrl(currentParagraph.content.background) ? (
               <img
-                src={currentParagraph.content.background.url}
+                src={getStableAssetUrl(currentParagraph.content.background)}
                 alt={currentParagraph.content.background.name}
                 className="w-full h-full bg-gray-900"
                 style={{

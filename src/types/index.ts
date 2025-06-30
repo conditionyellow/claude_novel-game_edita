@@ -37,6 +37,7 @@ export type {
 export type {
   ThemeColors,
   ProjectResolution,
+  TitleScreenSettings,
   ProjectSettings,
   ProjectMetadata,
   NovelProject,

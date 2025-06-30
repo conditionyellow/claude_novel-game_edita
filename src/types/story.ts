@@ -27,7 +27,7 @@ export interface Condition {
   value: string | number | boolean;
 }
 
-export type ParagraphType = 'start' | 'middle' | 'end';
+export type ParagraphType = 'title' | 'start' | 'middle' | 'end';
 
 export interface ParagraphContent {
   text: string;
@@ -35,6 +35,11 @@ export interface ParagraphContent {
   background?: Asset;
   characters?: Character[];
   bgm?: Asset;
+  // タイトルパラグラフ専用設定
+  titleImage?: Asset;
+  titleColor?: string;
+  titleFontSize?: number;
+  showProjectTitle?: boolean;
 }
 
 export interface ParagraphMetadata {

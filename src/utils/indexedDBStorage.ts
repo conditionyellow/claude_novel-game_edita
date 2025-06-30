@@ -72,6 +72,14 @@ export class IndexedDBAssetStorage implements AssetStorage {
       asset.category, 
       asset.name
     );
+
+    // 既存のファイルがあるかチェック
+    const existingFile = await this.checkExistingFile(db, filePath);
+    if (existingFile) {
+      // 既存のファイルとメタデータを削除（ログは開発時のみ）
+      await this.deleteExistingFile(db, filePath);
+      await this.deleteExistingAssetMetadata(db, asset.id);
+    }
     
     const metadata: AssetMetadata = {
       ...asset,
@@ -103,7 +111,13 @@ export class IndexedDBAssetStorage implements AssetStorage {
         resolve(url);
       };
       
-      transaction.onerror = () => reject(transaction.error);
+      transaction.onerror = (event) => {
+        if (transaction.error?.name === 'ConstraintError') {
+          reject(new Error(`ファイル名が重複しています: ${asset.name}`));
+        } else {
+          reject(transaction.error);
+        }
+      };
       
       // メタデータ保存
       const assetRequest = transaction.objectStore('assets').put(metadata);
@@ -181,6 +195,48 @@ export class IndexedDBAssetStorage implements AssetStorage {
       request.onerror = () => reject(request.error);
     });
   }
+
+  /**
+   * 既存ファイルの存在チェック
+   */
+  private async checkExistingFile(db: IDBDatabase, filePath: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['files'], 'readonly');
+      const request = transaction.objectStore('files').get(filePath);
+      
+      request.onsuccess = () => {
+        resolve(!!request.result);
+      };
+      
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * 既存ファイルの削除
+   */
+  private async deleteExistingFile(db: IDBDatabase, filePath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['files'], 'readwrite');
+      const request = transaction.objectStore('files').delete(filePath);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * 既存アセットメタデータの削除
+   */
+  private async deleteExistingAssetMetadata(db: IDBDatabase, assetId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['assets'], 'readwrite');
+      const request = transaction.objectStore('assets').delete(assetId);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
   
   /**
    * プロジェクト削除
@@ -218,7 +274,10 @@ export class IndexedDBAssetStorage implements AssetStorage {
     const db = await this.initDB();
     const asset = await this.getAsset(projectId, assetId);
     
-    if (!asset) throw new Error(`Asset not found: ${assetId}`);
+    if (!asset) {
+      console.warn(`Asset not found in IndexedDB: ${assetId}`);
+      throw new Error(`Asset not found: ${assetId}`);
+    }
     
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['files'], 'readonly');
@@ -231,11 +290,15 @@ export class IndexedDBAssetStorage implements AssetStorage {
           const url = URL.createObjectURL(result.data);
           resolve(url);
         } else {
-          reject(new Error('File data not found'));
+          console.warn(`File data not found for asset: ${assetId}, path: ${filePath}`);
+          reject(new Error(`File data not found for asset: ${assetId}`));
         }
       };
       
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        console.error(`Failed to get file data for asset: ${assetId}`, request.error);
+        reject(request.error);
+      };
     });
   }
   

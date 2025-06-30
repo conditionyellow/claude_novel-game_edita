@@ -9,18 +9,6 @@ import { FlowEditor } from '../Flow/FlowEditor';
 import { Preview } from './Preview';
 import { AssetManager } from '../Assets';
 
-/**
- * ObjectURLの有効性をチェック
- */
-const isValidObjectURL = (url: string): boolean => {
-  try {
-    // ObjectURLを使ってfetchを試行
-    fetch(url, { method: 'HEAD' }).catch(() => false);
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 export const EditorLayout: React.FC = () => {
   const { mode, currentProject, createNewProject, addAsset, addAssetWithFile, deleteAsset } = useEditorStore();
@@ -32,32 +20,9 @@ export const EditorLayout: React.FC = () => {
     }
   }, [currentProject, createNewProject]);
 
-  // アプリケーション初期化時にアセットURL再生成を実行
-  useEffect(() => {
-    const initializeAssets = async () => {
-      if (currentProject && currentProject.assets.length > 0) {
-        console.log('アプリケーション初期化: アセット参照確認開始');
-        
-        // ObjectURLが切れている可能性があるアセットを検出・再生成
-        const hasInvalidUrls = currentProject.assets.some(asset => 
-          asset.url.startsWith('blob:') && !isValidObjectURL(asset.url)
-        );
-        
-        if (hasInvalidUrls) {
-          console.log('無効なObjectURL検出: アセットURL再生成を実行');
-          try {
-            // 現在のプロジェクトを再読み込みしてアセットURLを更新
-            const { loadProject } = useEditorStore.getState();
-            await loadProject(currentProject);
-          } catch (error) {
-            console.warn('アセットURL再生成に失敗:', error);
-          }
-        }
-      }
-    };
-    
-    initializeAssets();
-  }, [currentProject?.id]); // プロジェクトIDが変わった時に実行
+  // Phase 20: 初期アセット検証システム無効化（グローバルマネージャーに統合済み）
+  // グローバルアセットURL管理システムが必要時に自動で安定URLを提供するため、
+  // プロアクティブ検証は不要
 
   // 新しいIndexedDB対応のアセットアップロード
   const handleAssetUpload = async (asset: Asset, file: File) => {

@@ -93,8 +93,33 @@ export const useEditorStore = create<EditorStore>()(
               }
             };
             
+            // 🔍 プロジェクト読み込み時の整合性チェック
+            console.log('📋 プロジェクト整合性チェック開始...');
+            
+            // プロジェクトIDの整合性を確認・修正
+            const correctedProject = ensureProjectIdConsistency(projectWithDefaults);
+            
+            const integrityCheckResult = await checkProjectIntegrity(correctedProject);
+            
+            if (integrityCheckResult.hasIssues) {
+              console.warn('⚠️ プロジェクトに整合性の問題が検出されました:', integrityCheckResult);
+              
+              // 整合性問題を自動修復
+              const repairedProject = await repairProjectIntegrity(correctedProject, integrityCheckResult);
+              
+              set({
+                currentProject: repairedProject,
+                selectedParagraphId: repairedProject.paragraphs[0]?.id || null,
+                isModified: false,
+                mode: 'editor',
+              });
+              
+              console.log('✅ プロジェクト整合性修復完了');
+              return;
+            }
+            
             // アセットURL再生成処理を実行
-            const regeneratedProject = await regenerateAssetUrls(projectWithDefaults);
+            const regeneratedProject = await regenerateAssetUrls(correctedProject);
             
             // 破損アセットのクリーンアップ
             const cleanedProject = await cleanupCorruptedAssets(regeneratedProject);
@@ -110,8 +135,9 @@ export const useEditorStore = create<EditorStore>()(
           } catch (error) {
             console.error('プロジェクト読み込みエラー:', error);
             // エラー時でも基本的な読み込みは実行
+            const correctedProject = ensureProjectIdConsistency(project);
             const projectWithDefaults = {
-              ...project,
+              ...correctedProject,
               settings: {
                 ...project.settings,
                 titleScreen: project.settings.titleScreen || {
@@ -605,12 +631,21 @@ async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject>
   if (DEBUG_ASSETS) console.log('アセットURL再生成開始:', project.assets.length, '個のアセット');
   
   const regeneratedAssets: Asset[] = [];
+  const failedAssets: string[] = [];
   
   for (const asset of project.assets) {
     try {
       // ObjectURLが無効かチェック（blob:から始まるURL）
       if (asset.url.startsWith('blob:')) {
         if (DEBUG_ASSETS) console.log(`ObjectURL再生成中: ${asset.name}`);
+        
+        // まずアセットがIndexedDBに存在するかチェック
+        const storedAsset = await assetStorage.getAsset(project.id, asset.id);
+        if (!storedAsset) {
+          console.warn(`❌ アセットがIndexedDBに存在しません: ${asset.name} (${asset.id})`);
+          failedAssets.push(asset.name);
+          continue; // このアセットはスキップ
+        }
         
         // IndexedDBから新しいURLを生成
         const newUrl = await assetStorage.getAssetUrl(project.id, asset.id);
@@ -631,9 +666,13 @@ async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject>
       }
     } catch (error) {
       console.warn(`⚠️ アセットURL再生成失敗: ${asset.name}`, error);
-      // エラーの場合でも元のアセットを保持（UI表示エラーを防ぐ）
-      regeneratedAssets.push(asset);
+      failedAssets.push(asset.name);
+      // エラーの場合は除外（無効なアセット参照を残さない）
     }
+  }
+  
+  if (failedAssets.length > 0) {
+    console.warn(`🧹 無効なアセット参照を除外しました: ${failedAssets.join(', ')}`);
   }
   
   if (DEBUG_ASSETS) console.log('アセットURL再生成完了:', regeneratedAssets.length, '個のアセット処理');
@@ -641,5 +680,211 @@ async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject>
   return {
     ...project,
     assets: regeneratedAssets
+  };
+}
+
+/**
+ * プロジェクト整合性チェック関数
+ */
+async function checkProjectIntegrity(project: NovelProject): Promise<{
+  hasIssues: boolean;
+  missingAssets: Asset[];
+  orphanedAssets: Asset[];
+  corruptedReferences: { paragraphId: string; assetName: string; type: 'background' | 'bgm' }[];
+}> {
+  const missingAssets: Asset[] = [];
+  const corruptedReferences: { paragraphId: string; assetName: string; type: 'background' | 'bgm' }[] = [];
+  
+  console.log('🔍 詳細整合性チェック開始...');
+  console.log(`📋 プロジェクト「${project.title}」- 総アセット数: ${project.assets.length}個`);
+  
+  // プロジェクトが参照しているアセットがIndexedDBに存在するかチェック
+  for (const asset of project.assets) {
+    try {
+      const storedAsset = await assetStorage.getAsset(project.id, asset.id);
+      if (!storedAsset) {
+        console.warn(`❌ 欠損アセット発見: ${asset.name} (${asset.id}) - カテゴリ: ${asset.category}`);
+        missingAssets.push(asset);
+      } else {
+        console.log(`✅ アセット確認済み: ${asset.name}`);
+      }
+    } catch (error) {
+      console.error(`💥 アセットチェックエラー: ${asset.name} - ${error}`);
+      missingAssets.push(asset);
+    }
+  }
+  
+  // パラグラフのアセット参照をチェック
+  for (const paragraph of project.paragraphs) {
+    if (paragraph.backgroundImage) {
+      const assetName = paragraph.backgroundImage.split('/').pop() || '';
+      const asset = project.assets.find(a => a.name === assetName);
+      if (!asset || missingAssets.some(ma => ma.id === asset.id)) {
+        corruptedReferences.push({
+          paragraphId: paragraph.id,
+          assetName,
+          type: 'background'
+        });
+      }
+    }
+    
+    if (paragraph.bgm) {
+      const assetName = paragraph.bgm.split('/').pop() || '';
+      const asset = project.assets.find(a => a.name === assetName);
+      if (!asset || missingAssets.some(ma => ma.id === asset.id)) {
+        corruptedReferences.push({
+          paragraphId: paragraph.id,
+          assetName,
+          type: 'bgm'
+        });
+      }
+    }
+  }
+  
+  // IndexedDBに存在するが参照されていないアセット（孤立アセット）
+  const storedAssets = await assetStorage.getProjectAssets(project.id);
+  const referencedIds = new Set(project.assets.map(a => a.id));
+  const orphanedAssets = storedAssets.filter(asset => !referencedIds.has(asset.id));
+  
+  const hasIssues = missingAssets.length > 0 || corruptedReferences.length > 0 || orphanedAssets.length > 0;
+  
+  return {
+    hasIssues,
+    missingAssets,
+    orphanedAssets,
+    corruptedReferences
+  };
+}
+
+/**
+ * プロジェクト整合性修復関数
+ */
+async function repairProjectIntegrity(
+  project: NovelProject, 
+  integrityResult: Awaited<ReturnType<typeof checkProjectIntegrity>>
+): Promise<NovelProject> {
+  console.log('🔧 プロジェクト整合性修復開始...');
+  
+  // 📋 詳細な修復ログ
+  if (integrityResult.missingAssets.length > 0) {
+    console.log('💔 欠損アセット一覧:');
+    integrityResult.missingAssets.forEach((asset, index) => {
+      console.log(`  ${index + 1}. ${asset.name} (${asset.category}) - ${asset.id}`);
+    });
+  }
+  
+  // 🔄 アセット修復を試行（プロジェクトファイルからの再インポート）
+  const recoveredAssets: Asset[] = [];
+  for (const missingAsset of integrityResult.missingAssets) {
+    try {
+      // プロジェクトファイルにBase64データが含まれている場合は復元を試行
+      if (missingAsset.url && missingAsset.url.startsWith('data:')) {
+        console.log(`🔄 Base64からアセット復元を試行: ${missingAsset.name}`);
+        
+        // Base64データをBlobに変換
+        const response = await fetch(missingAsset.url);
+        const blob = await response.blob();
+        const file = new File([blob], missingAsset.name, { 
+          type: missingAsset.metadata.format 
+        });
+        
+        // IndexedDBに保存
+        const newUrl = await assetStorage.saveAsset(project.id, missingAsset, file);
+        
+        const recoveredAsset = {
+          ...missingAsset,
+          url: newUrl,
+          metadata: {
+            ...missingAsset.metadata,
+            lastUsed: new Date()
+          }
+        };
+        
+        recoveredAssets.push(recoveredAsset);
+        console.log(`✅ アセット復元成功: ${missingAsset.name}`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ アセット復元失敗: ${missingAsset.name} - ${error}`);
+    }
+  }
+  
+  // 無効なアセット参照を削除（復元できなかったもののみ）
+  const unrecoverableAssets = integrityResult.missingAssets.filter(
+    ma => !recoveredAssets.some(ra => ra.id === ma.id)
+  );
+  
+  const validAssets = [
+    ...project.assets.filter(asset => 
+      !unrecoverableAssets.some(ua => ua.id === asset.id)
+    ),
+    ...recoveredAssets
+  ];
+  
+  // パラグラフから破損した参照を削除
+  const repairedParagraphs = project.paragraphs.map(paragraph => ({
+    ...paragraph,
+    backgroundImage: integrityResult.corruptedReferences.some(
+      cr => cr.paragraphId === paragraph.id && cr.type === 'background'
+    ) ? undefined : paragraph.backgroundImage,
+    bgm: integrityResult.corruptedReferences.some(
+      cr => cr.paragraphId === paragraph.id && cr.type === 'bgm'
+    ) ? undefined : paragraph.bgm,
+  }));
+  
+  // 孤立したアセットをIndexedDBから削除
+  for (const orphanedAsset of integrityResult.orphanedAssets) {
+    try {
+      await assetStorage.deleteAsset(project.id, orphanedAsset.id);
+      console.log(`🗑️ 孤立アセット削除: ${orphanedAsset.name}`);
+    } catch (error) {
+      console.warn(`⚠️ 孤立アセット削除失敗: ${orphanedAsset.name}`, error);
+    }
+  }
+  
+  console.log(`📊 修復統計:
+    - 復元されたアセット: ${recoveredAssets.length}個
+    - 削除された無効アセット: ${unrecoverableAssets.length}個
+    - 修復されたパラグラフ参照: ${integrityResult.corruptedReferences.length}個
+    - 削除された孤立アセット: ${integrityResult.orphanedAssets.length}個`);
+  
+  return {
+    ...project,
+    assets: validAssets,
+    paragraphs: repairedParagraphs
+  };
+}
+
+/**
+ * プロジェクトIDの整合性を確保する関数
+ */
+function ensureProjectIdConsistency(project: NovelProject): NovelProject {
+  console.log(`🔍 プロジェクトID整合性チェック: ${project.id}`);
+  
+  // プロジェクトIDが未設定の場合はデフォルト値を設定
+  const projectId = project.id || 'default';
+  
+  if (project.id !== projectId) {
+    console.log(`📝 プロジェクトIDを修正: ${project.id} → ${projectId}`);
+  }
+  
+  // 全アセットのプロジェクトIDも統一
+  const correctedAssets = project.assets.map(asset => {
+    if (asset.metadata && 'projectId' in asset.metadata && asset.metadata.projectId !== projectId) {
+      console.log(`📝 アセット「${asset.name}」のプロジェクトIDを修正: ${asset.metadata.projectId} → ${projectId}`);
+      return {
+        ...asset,
+        metadata: {
+          ...asset.metadata,
+          projectId
+        }
+      };
+    }
+    return asset;
+  });
+  
+  return {
+    ...project,
+    id: projectId,
+    assets: correctedAssets
   };
 }

@@ -7,6 +7,7 @@ import type { StateCreator } from 'zustand';
 import type { NovelProject, Paragraph, Asset } from '../../types';
 import { createEmptyProject, createEmptyParagraph } from '../../utils';
 import { assetStorage } from '../../utils/assetStorageManager';
+import { autoRepairAssetUrls } from '../../utils/assetUrlManager';
 
 export interface ProjectSlice {
   // State
@@ -47,14 +48,28 @@ export const createProjectSlice: StateCreator<ProjectSlice> = (set, get) => ({
   },
 
   loadProject: async (project: NovelProject) => {
-    // アセットURL再生成：ObjectURLが無効になっている可能性に対応
-    const regeneratedProject = await regenerateAssetUrls(project);
-    
-    set({
-      currentProject: regeneratedProject,
-      selectedParagraphId: regeneratedProject.paragraphs[0]?.id || null,
-      isModified: false,
-    });
+    try {
+      console.log('プロジェクト読み込み開始:', project.title);
+      
+      // アセットURL再生成：ObjectURLが無効になっている可能性に対応
+      const regeneratedProject = await regenerateAssetUrls(project);
+      
+      set({
+        currentProject: regeneratedProject,
+        selectedParagraphId: regeneratedProject.paragraphs[0]?.id || null,
+        isModified: false,
+      });
+      
+      console.log('プロジェクト読み込み完了:', regeneratedProject.title);
+    } catch (error) {
+      console.error('プロジェクト読み込みエラー:', error);
+      // エラーが発生しても基本的な読み込みは実行
+      set({
+        currentProject: project,
+        selectedParagraphId: project.paragraphs[0]?.id || null,
+        isModified: false,
+      });
+    }
   },
 
   updateProject: (updates: Partial<NovelProject>) => {
@@ -189,49 +204,32 @@ export const createProjectSlice: StateCreator<ProjectSlice> = (set, get) => ({
 });
 
 /**
- * アセットURL再生成関数
+ * アセットURL再生成関数（最終改良版）
  * プロジェクト読み込み時にObjectURLが無効になっている可能性があるため、
- * IndexedDBから新しいURLを生成し直す
+ * 新しいassetUrlManagerを使用して確実な修復を実行
  */
 async function regenerateAssetUrls(project: NovelProject): Promise<NovelProject> {
-  console.log('アセットURL再生成開始:', project.assets.length, '個のアセット');
+  console.log('🔧 アセットURL修復開始:', project.title);
   
-  const regeneratedAssets: Asset[] = [];
-  
-  for (const asset of project.assets) {
-    try {
-      // ObjectURLが無効かチェック（blob:から始まるURL）
-      if (asset.url.startsWith('blob:')) {
-        console.log(`ObjectURL再生成中: ${asset.name}`);
-        
-        // IndexedDBから新しいURLを生成
-        const newUrl = await assetStorage.getAssetUrl(project.id, asset.id);
-        
-        regeneratedAssets.push({
-          ...asset,
-          url: newUrl,
-          metadata: {
-            ...asset.metadata,
-            lastUsed: new Date()
-          }
-        });
-        
-        console.log(`✅ URL再生成完了: ${asset.name}`);
-      } else {
-        // Base64や他の形式はそのまま維持
-        regeneratedAssets.push(asset);
-      }
-    } catch (error) {
-      console.warn(`⚠️ アセットURL再生成失敗: ${asset.name}`, error);
-      // エラーの場合でも元のアセットを保持（UI表示エラーを防ぐ）
-      regeneratedAssets.push(asset);
-    }
+  try {
+    // 新しいassetUrlManagerで自動修復実行
+    // デフォルトは'validation-based'戦略（有効性チェック後に必要分のみ再生成）
+    const repairedAssets = await autoRepairAssetUrls(
+      project.id, 
+      project.assets,
+      'validation-based' // または 'proactive' で全ObjectURL再生成
+    );
+    
+    console.log('✅ アセットURL修復完了:', project.title);
+    
+    return {
+      ...project,
+      assets: repairedAssets
+    };
+    
+  } catch (error) {
+    console.error('⚠️ アセットURL修復エラー:', error);
+    // エラー時は元のプロジェクトを返す
+    return project;
   }
-  
-  console.log('アセットURL再生成完了:', regeneratedAssets.length, '個のアセット処理');
-  
-  return {
-    ...project,
-    assets: regeneratedAssets
-  };
 }

@@ -14,29 +14,22 @@ const nodeTypes = {
 export const FlowEditor: React.FC = () => {
   const { currentProject, updateParagraph, selectParagraph, deleteParagraph } = useEditorStore();
   
-  // デバッグ情報をコンソールに出力
-  console.log('=================== FlowEditor Render Start ===================');
-  console.log('FlowEditor - currentProject exists:', !!currentProject);
-  console.log('FlowEditor - paragraphs count:', currentProject?.paragraphs?.length || 0);
-  if (currentProject) {
-    console.log('FlowEditor - project paragraphs:', currentProject.paragraphs.map(p => ({ id: p.id, title: p.title, type: p.type })));
+  // デバッグモードでのみログ出力
+  const DEBUG_MODE = false; // 本番では false に設定
+  
+  if (DEBUG_MODE) {
+    console.log('FlowEditor - currentProject exists:', !!currentProject);
+    console.log('FlowEditor - paragraphs count:', currentProject?.paragraphs?.length || 0);
   }
-  console.log('FlowEditor - Methods available:', {
-    updateParagraph: typeof updateParagraph,
-    selectParagraph: typeof selectParagraph,
-    deleteParagraph: typeof deleteParagraph
-  });
 
   
   // プロジェクトのパラグラフからノードを作成
   const createNodesFromParagraphs = useCallback(() => {
-    console.log('=================== createNodesFromParagraphs Called ===================');
+    if (DEBUG_MODE) console.log('createNodesFromParagraphs called');
     if (!currentProject) {
-      console.log('FlowEditor - createNodesFromParagraphs: No currentProject available');
+      if (DEBUG_MODE) console.log('No currentProject available');
       return [];
     }
-    
-    console.log('FlowEditor - currentProject.paragraphs:', currentProject.paragraphs);
     
     const nodes = currentProject.paragraphs.map((paragraph, index) => {
       const node = {
@@ -46,22 +39,22 @@ export const FlowEditor: React.FC = () => {
         data: { 
           paragraph: paragraph,
           onSelect: (id: string) => {
-            console.log('Node onSelect called with id:', id);
+            if (DEBUG_MODE) console.log('Node onSelect called with id:', id);
             selectParagraph(id);
           },
           onDelete: (id: string) => {
-            console.log('Node onDelete called with id:', id);
+            if (DEBUG_MODE) console.log('Node onDelete called with id:', id);
             deleteParagraph(id);
           },
         },
         draggable: true,
       };
-      console.log(`FlowEditor - Created node ${index + 1}:`, node);
+      if (DEBUG_MODE) console.log(`FlowEditor - Created node ${index + 1}:`, node);
       return node;
     });
     
-    console.log('FlowEditor - Total nodes created:', nodes.length);
-    console.log('FlowEditor - All nodes:', nodes);
+    if (DEBUG_MODE) console.log('FlowEditor - Total nodes created:', nodes.length);
+    if (DEBUG_MODE) console.log('FlowEditor - All nodes:', nodes);
     return nodes;
   }, [currentProject, selectParagraph, deleteParagraph]);
 
@@ -97,42 +90,42 @@ export const FlowEditor: React.FC = () => {
     return edges;
   }, [currentProject]);
 
-  console.log('=================== FlowEditor Initialization ===================');
+  if (DEBUG_MODE) console.log('=================== FlowEditor Initialization ===================');
   const initialNodes = createNodesFromParagraphs();
   const initialEdges = createEdgesFromChoices();
   
-  console.log('FlowEditor - Initial nodes result:', initialNodes);
-  console.log('FlowEditor - Initial edges result:', initialEdges);
+  if (DEBUG_MODE) console.log('FlowEditor - Initial nodes result:', initialNodes);
+  if (DEBUG_MODE) console.log('FlowEditor - Initial edges result:', initialEdges);
   
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   
-  console.log('FlowEditor - useNodesState result - nodes:', nodes);
-  console.log('FlowEditor - useEdgesState result - edges:', edges);
+  if (DEBUG_MODE) console.log('FlowEditor - useNodesState result - nodes:', nodes);
+  if (DEBUG_MODE) console.log('FlowEditor - useEdgesState result - edges:', edges);
 
   // 改善された自動レイアウト機能
   const autoLayout = useCallback(() => {
     if (!currentProject || currentProject.paragraphs.length === 0) return;
 
-    console.log('自動レイアウト開始 - パラグラフ数:', currentProject.paragraphs.length);
+    if (DEBUG_MODE) console.log('自動レイアウト開始 - パラグラフ数:', currentProject.paragraphs.length);
 
     // 現在のノードとエッジを取得
     const currentNodes = nodes;
     const currentEdges = edges;
 
-    console.log('現在のノード数:', currentNodes.length);
-    console.log('現在のエッジ数:', currentEdges.length);
+    if (DEBUG_MODE) console.log('現在のノード数:', currentNodes.length);
+    if (DEBUG_MODE) console.log('現在のエッジ数:', currentEdges.length);
 
     // flowUtilsの高度なレイアウトアルゴリズムを適用
     const layoutedNodes = applyAutoLayout(currentNodes, currentEdges);
 
-    console.log('レイアウト後のノード数:', layoutedNodes.length);
+    if (DEBUG_MODE) console.log('レイアウト後のノード数:', layoutedNodes.length);
 
     // 計算された位置をパラグラフに反映
     layoutedNodes.forEach(node => {
       const paragraph = currentProject.paragraphs.find(p => p.id === node.id);
       if (paragraph) {
-        console.log(`ノード ${paragraph.title} の位置を更新:`, node.position);
+        if (DEBUG_MODE) console.log(`ノード ${paragraph.title} の位置を更新:`, node.position);
         updateParagraph(paragraph.id, {
           position: node.position
         });
@@ -142,7 +135,7 @@ export const FlowEditor: React.FC = () => {
     // ノードの位置を更新
     setNodes(layoutedNodes);
 
-    console.log('自動レイアウト完了');
+    if (DEBUG_MODE) console.log('自動レイアウト完了');
   }, [currentProject, updateParagraph, nodes, edges, setNodes]);
   
   // ドラッグ終了時のハンドラー
@@ -155,13 +148,13 @@ export const FlowEditor: React.FC = () => {
 
   // プロジェクトが変更された時にノードとエッジを更新
   useEffect(() => {
-    console.log('FlowEditor - useEffect (project change) triggered');
-    console.log('FlowEditor - currentProject in useEffect:', currentProject);
+    if (DEBUG_MODE) console.log('FlowEditor - useEffect (project change) triggered');
+    if (DEBUG_MODE) console.log('FlowEditor - currentProject in useEffect:', currentProject);
     if (currentProject) {
       const newNodes = createNodesFromParagraphs();
       const newEdges = createEdgesFromChoices();
-      console.log('FlowEditor - Setting new nodes:', newNodes.length);
-      console.log('FlowEditor - Setting new edges:', newEdges.length);
+      if (DEBUG_MODE) console.log('FlowEditor - Setting new nodes:', newNodes.length);
+      if (DEBUG_MODE) console.log('FlowEditor - Setting new edges:', newEdges.length);
       setNodes(newNodes);
       setEdges(newEdges);
     }
@@ -206,25 +199,27 @@ export const FlowEditor: React.FC = () => {
     );
   }
 
-  console.log('=================== FlowEditor Rendering ReactFlow ===================');
-  console.log('FlowEditor - Final nodes for rendering:', nodes);
-  console.log('FlowEditor - Final edges for rendering:', edges);
-  console.log('FlowEditor - nodeTypes:', nodeTypes);
+  if (DEBUG_MODE) console.log('=================== FlowEditor Rendering ReactFlow ===================');
+  if (DEBUG_MODE) console.log('FlowEditor - Final nodes for rendering:', nodes);
+  if (DEBUG_MODE) console.log('FlowEditor - Final edges for rendering:', edges);
+  if (DEBUG_MODE) console.log('FlowEditor - nodeTypes:', nodeTypes);
 
   return (
     <div className="w-full h-full bg-gray-50 rounded-lg border border-gray-200 overflow-hidden relative">
-      {/* デバッグ情報表示 */}
-      <div className="absolute top-4 left-4 z-50 bg-yellow-200 p-2 text-xs border border-yellow-400 rounded shadow-lg">
-        <div><strong>DEBUG INFO:</strong></div>
-        <div>Nodes: {nodes.length}</div>
-        <div>Edges: {edges.length}</div>
-        <div>Project: {currentProject ? 'Loaded' : 'None'}</div>
-        <div>Project ID: {currentProject?.id || 'N/A'}</div>
-        <div>Paragraphs: {currentProject?.paragraphs?.length || 0}</div>
-        {nodes.length > 0 && (
-          <div>First Node ID: {nodes[0].id}</div>
-        )}
-      </div>
+      {/* デバッグ情報表示 (DEBUG_MODEが有効な時のみ) */}
+      {DEBUG_MODE && (
+        <div className="absolute top-4 left-4 z-50 bg-yellow-200 p-2 text-xs border border-yellow-400 rounded shadow-lg">
+          <div><strong>DEBUG INFO:</strong></div>
+          <div>Nodes: {nodes.length}</div>
+          <div>Edges: {edges.length}</div>
+          <div>Project: {currentProject ? 'Loaded' : 'None'}</div>
+          <div>Project ID: {currentProject?.id || 'N/A'}</div>
+          <div>Paragraphs: {currentProject?.paragraphs?.length || 0}</div>
+          {nodes.length > 0 && (
+            <div>First Node ID: {nodes[0].id}</div>
+          )}
+        </div>
+      )}
       
       {/* 自動レイアウトボタン */}
       <div className="absolute top-4 right-4 z-50">
@@ -244,10 +239,12 @@ export const FlowEditor: React.FC = () => {
             <div className="text-4xl mb-4">⚠️</div>
             <h3 className="text-lg font-medium mb-2">ノードが見つかりません</h3>
             <p className="text-sm">プロジェクトにパラグラフを追加してください</p>
-            <div className="mt-4 text-xs bg-gray-100 p-2 rounded">
-              <div>Debug: Project exists = {!!currentProject}</div>
-              <div>Debug: Paragraphs = {currentProject?.paragraphs?.length || 0}</div>
-            </div>
+            {DEBUG_MODE && (
+              <div className="mt-4 text-xs bg-gray-100 p-2 rounded">
+                <div>Debug: Project exists = {!!currentProject}</div>
+                <div>Debug: Paragraphs = {currentProject?.paragraphs?.length || 0}</div>
+              </div>
+            )}
           </div>
         </div>
       ) : (

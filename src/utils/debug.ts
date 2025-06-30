@@ -216,6 +216,10 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     '\n• debugNovelEditor.logAssets(project) - アセット使用状況ログ',
     '\n• debugNovelEditor.logMemory() - メモリ使用量ログ',
     '\n• debugNovelEditor.forceGC() - ガベージコレクション強制実行',
-    '\n• debugNovelEditor.cleanup() - リソースクリーンアップ'
+    '\n• debugNovelEditor.cleanup() - リソースクリーンアップ',
+    '\n• debugIndexedDB.checkIntegrity() - IndexedDB整合性チェック',
+    '\n• debugIndexedDB.cleanup() - IndexedDB破損データ削除',
+    '\n• debugIndexedDB.reset() - IndexedDB完全リセット',
+    '\n• debugIndexedDB.report() - IndexedDB診断レポート'
   );
 }

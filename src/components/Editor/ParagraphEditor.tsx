@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
+// useAssetRepair は Phase 20 でグローバルマネージャーに統合済み
+import { globalAssetUrlManager } from '../../utils/globalAssetUrlManager';
 import { Input, Textarea, Button } from '../UI';
 import { ChoiceEditor } from './ChoiceEditor';
 import { Plus, Image, X, Music, ChevronDown, ChevronUp, Crown, Upload } from 'lucide-react';
@@ -156,7 +158,7 @@ const TitleImageUploader: React.FC<TitleImageUploaderProps> = ({
           >
             <option value="">画像を選択...</option>
             {availableImages.map(asset => (
-              <option key={asset.id} value={asset.id}>
+              <option key={`${asset.id}-${asset.name}`} value={asset.id}>
                 {asset.name}
               </option>
             ))}
@@ -173,8 +175,14 @@ const TitleImageUploader: React.FC<TitleImageUploaderProps> = ({
   );
 };
 
+// Phase 20: 旧検証システム削除完了 - グローバルアセットURL管理システムに統合済み
+
 export const ParagraphEditor: React.FC = () => {
   const [isHeaderCollapsed, setIsHeaderCollapsed] = React.useState(false);
+  const [validatedBackgroundAsset, setValidatedBackgroundAsset] = useState<Asset | null>(null);
+  const [validatedTitleImageAsset, setValidatedTitleImageAsset] = useState<Asset | null>(null);
+  const [validatedBgmAsset, setValidatedBgmAsset] = useState<Asset | null>(null);
+  const [validatedTitleBgmAsset, setValidatedTitleBgmAsset] = useState<Asset | null>(null);
   
   const { 
     currentProject, 
@@ -183,10 +191,159 @@ export const ParagraphEditor: React.FC = () => {
     addParagraph,
     updateProject
   } = useEditorStore();
+  
+  // Phase 20: 従来の検証システムをグローバルマネージャーに統合
 
   const selectedParagraph = currentProject?.paragraphs.find(
     p => p.id === selectedParagraphId
   );
+
+  // 検証済みパラグラフIDを追跡
+  const validatedParagraphs = useRef(new Set<string>());
+  
+  // プロジェクト変更時に検証キャッシュをクリア
+  useEffect(() => {
+    validatedParagraphs.current.clear();
+  }, [currentProject?.id]);
+  
+  // 選択パラグラフのアセットURL検証・再生成（改良版・重複実行防止）
+  useEffect(() => {
+    let isValidating = false;
+    
+    const validateAssets = async () => {
+      if (!selectedParagraph || isValidating) {
+        if (!selectedParagraph) {
+          setValidatedBackgroundAsset(null);
+          setValidatedTitleImageAsset(null);
+          setValidatedBgmAsset(null);
+          setValidatedTitleBgmAsset(null);
+        }
+        return;
+      }
+      
+      // 既に検証済みのパラグラフはスキップ
+      if (validatedParagraphs.current.has(selectedParagraph.id)) {
+        console.log(`⏭️ ${selectedParagraph.title}: 既に検証済みのためスキップ`);
+        return;
+      }
+      
+      isValidating = true;
+      console.log('🔍 パラグラフアセット検証開始:', selectedParagraph.title);
+      
+      // 検証済みとしてマーク
+      validatedParagraphs.current.add(selectedParagraph.id);
+      
+      // 背景画像の検証（グローバルマネージャー使用）
+      if (selectedParagraph.content.background) {
+        const needsValidation = !validatedBackgroundAsset || 
+                               validatedBackgroundAsset.id !== selectedParagraph.content.background.id;
+        
+        if (needsValidation) {
+          console.log('🖼️ 背景画像安定URL取得中:', selectedParagraph.content.background.name);
+          try {
+            const stableUrl = await globalAssetUrlManager.getStableUrl(currentProject.id, selectedParagraph.content.background);
+            const validated = { ...selectedParagraph.content.background, url: stableUrl };
+            setValidatedBackgroundAsset(validated);
+            console.log('✅ 背景画像安定URL取得完了:', validated.name);
+          } catch (error) {
+            console.warn('⚠️ 背景画像安定URL取得失敗:', error);
+            setValidatedBackgroundAsset(selectedParagraph.content.background);
+          }
+        }
+      } else {
+        setValidatedBackgroundAsset(null);
+      }
+      
+      // タイトル画像の検証（グローバルマネージャー使用）
+      if (selectedParagraph.content.titleImage) {
+        const needsValidation = !validatedTitleImageAsset || 
+                               validatedTitleImageAsset.id !== selectedParagraph.content.titleImage.id;
+        
+        if (needsValidation) {
+          console.log('🎨 タイトル画像安定URL取得中:', selectedParagraph.content.titleImage.name);
+          try {
+            const stableUrl = await globalAssetUrlManager.getStableUrl(currentProject.id, selectedParagraph.content.titleImage);
+            const validated = { ...selectedParagraph.content.titleImage, url: stableUrl };
+            setValidatedTitleImageAsset(validated);
+            console.log('✅ タイトル画像安定URL取得完了:', validated.name);
+          } catch (error) {
+            console.warn('⚠️ タイトル画像安定URL取得失敗:', error);
+            setValidatedTitleImageAsset(selectedParagraph.content.titleImage);
+          }
+        }
+      } else {
+        setValidatedTitleImageAsset(null);
+      }
+      
+      // BGMの検証（グローバルマネージャー使用）
+      if (selectedParagraph.content.bgm) {
+        const needsValidation = !validatedBgmAsset || 
+                               validatedBgmAsset.id !== selectedParagraph.content.bgm.id;
+        
+        if (needsValidation) {
+          console.log('🎵 BGM安定URL取得中:', selectedParagraph.content.bgm.name);
+          try {
+            const stableUrl = await globalAssetUrlManager.getStableUrl(currentProject.id, selectedParagraph.content.bgm);
+            const validated = { ...selectedParagraph.content.bgm, url: stableUrl };
+            setValidatedBgmAsset(validated);
+            console.log('✅ BGM安定URL取得完了:', validated.name);
+          } catch (error) {
+            console.warn('⚠️ BGM安定URL取得失敗:', error);
+            setValidatedBgmAsset(selectedParagraph.content.bgm);
+          }
+        }
+      } else {
+        setValidatedBgmAsset(null);
+      }
+      
+      // タイトル画面BGMの検証（タイトルパラグラフのみ・グローバルマネージャー使用）
+      if (selectedParagraph.type === 'title' && currentProject?.settings?.titleScreen?.bgm) {
+        const needsValidation = !validatedTitleBgmAsset || 
+                               validatedTitleBgmAsset.id !== currentProject.settings.titleScreen.bgm.id;
+        
+        if (needsValidation) {
+          console.log('🎵 タイトルBGM安定URL取得中:', currentProject.settings.titleScreen.bgm.name);
+          try {
+            const stableUrl = await globalAssetUrlManager.getStableUrl(currentProject.id, currentProject.settings.titleScreen.bgm);
+            const validated = { ...currentProject.settings.titleScreen.bgm, url: stableUrl };
+            setValidatedTitleBgmAsset(validated);
+            console.log('✅ タイトルBGM安定URL取得完了:', validated.name);
+            
+            // プロジェクト設定を更新（URL同期）
+            if (validated.url !== currentProject.settings.titleScreen.bgm.url) {
+              updateProject({
+                settings: {
+                  ...currentProject.settings,
+                  titleScreen: {
+                    ...currentProject.settings.titleScreen,
+                    bgm: validated
+                  }
+                }
+              });
+            }
+          } catch (error) {
+            console.warn('⚠️ タイトルBGM安定URL取得失敗:', error);
+            setValidatedTitleBgmAsset(currentProject.settings.titleScreen.bgm);
+          }
+        }
+      } else {
+        setValidatedTitleBgmAsset(null);
+      }
+      
+      isValidating = false;
+    };
+    
+    // デバウンス処理で重複実行を防止
+    const timeoutId = setTimeout(validateAssets, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      isValidating = false;
+    };
+  }, [selectedParagraph?.id, selectedParagraph?.content.background?.id, selectedParagraph?.content.background?.url, selectedParagraph?.content.titleImage?.id, selectedParagraph?.content.titleImage?.url, selectedParagraph?.content.bgm?.id, selectedParagraph?.content.bgm?.url, currentProject?.settings?.titleScreen?.bgm?.id, currentProject?.settings?.titleScreen?.bgm?.url, validatedBackgroundAsset?.id, validatedTitleImageAsset?.id, validatedBgmAsset?.id, validatedTitleBgmAsset?.id, updateProject]);
+
+  // プロアクティブ修復システム無効化（グローバルマネージャーと統合済み）
+  // Phase 20: グローバルアセットURL管理システムが全ての検証・修復を処理するため無効化
 
   if (!currentProject) {
     return (
@@ -296,32 +453,89 @@ export const ParagraphEditor: React.FC = () => {
     return newParagraphId || '';
   };
 
-  const handleUpdateBackground = (asset: Asset | null) => {
+  const handleUpdateBackground = async (asset: Asset | null) => {
     updateParagraph(selectedParagraph.id, {
       content: {
         ...selectedParagraph.content,
         background: asset || undefined,
       },
     });
+    
+    // 選択されたアセットを即座に検証状態に反映
+    if (asset) {
+      try {
+        // 検証キャッシュから現在のパラグラフを削除（強制再検証）
+        validatedParagraphs.current.delete(selectedParagraph.id);
+        
+        // グローバルマネージャーから安定URLを取得
+        const stableUrl = await globalAssetUrlManager.getStableUrl(currentProject.id, asset);
+        const validated = { ...asset, url: stableUrl };
+        setValidatedBackgroundAsset(validated);
+        console.log('✅ 背景画像選択時の安定URL取得完了:', validated.name);
+      } catch (error) {
+        console.warn('⚠️ 背景画像選択時の検証失敗:', error);
+        setValidatedBackgroundAsset(asset);
+      }
+    } else {
+      setValidatedBackgroundAsset(null);
+    }
   };
 
-  const handleUpdateBgm = (asset: Asset | null) => {
+  const handleUpdateBgm = async (asset: Asset | null) => {
     updateParagraph(selectedParagraph.id, {
       content: {
         ...selectedParagraph.content,
         bgm: asset || undefined,
       },
     });
+    
+    // 選択されたアセットを即座に検証状態に反映
+    if (asset) {
+      try {
+        // 検証キャッシュから現在のパラグラフを削除（強制再検証）
+        validatedParagraphs.current.delete(selectedParagraph.id);
+        
+        // グローバルマネージャーから安定URLを取得
+        const stableUrl = await globalAssetUrlManager.getStableUrl(currentProject.id, asset);
+        const validated = { ...asset, url: stableUrl };
+        setValidatedBgmAsset(validated);
+        console.log('✅ BGM選択時の安定URL取得完了:', validated.name);
+      } catch (error) {
+        console.warn('⚠️ BGM選択時の検証失敗:', error);
+        setValidatedBgmAsset(asset);
+      }
+    } else {
+      setValidatedBgmAsset(null);
+    }
   };
 
   // タイトルパラグラフ専用ハンドラー
-  const handleUpdateTitleImage = (asset: Asset | null) => {
+  const handleUpdateTitleImage = async (asset: Asset | null) => {
     updateParagraph(selectedParagraph.id, {
       content: {
         ...selectedParagraph.content,
         titleImage: asset || undefined,
       },
     });
+    
+    // 選択されたアセットを即座に検証状態に反映
+    if (asset) {
+      try {
+        // 検証キャッシュから現在のパラグラフを削除（強制再検証）
+        validatedParagraphs.current.delete(selectedParagraph.id);
+        
+        // グローバルマネージャーから安定URLを取得
+        const stableUrl = await globalAssetUrlManager.getStableUrl(currentProject.id, asset);
+        const validated = { ...asset, url: stableUrl };
+        setValidatedTitleImageAsset(validated);
+        console.log('✅ タイトル画像選択時の安定URL取得完了:', validated.name);
+      } catch (error) {
+        console.warn('⚠️ タイトル画像選択時の検証失敗:', error);
+        setValidatedTitleImageAsset(asset);
+      }
+    } else {
+      setValidatedTitleImageAsset(null);
+    }
   };
 
   const handleUpdateShowProjectTitle = (showProjectTitle: boolean) => {
@@ -600,16 +814,29 @@ export const ParagraphEditor: React.FC = () => {
             <div className="space-y-3">
               <h3 className="text-md font-medium text-gray-800">背景画像</h3>
               
-              {selectedParagraph.content.background ? (
+              {validatedBackgroundAsset ? (
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   {/* 画像プレビュー */}
                   <div className="mb-4">
                     <div className="relative max-w-full">
                       <img
-                        src={selectedParagraph.content.background.url}
-                        alt={selectedParagraph.content.background.name}
+                        src={validatedBackgroundAsset.url}
+                        alt={validatedBackgroundAsset.name}
                         className="w-full h-auto max-h-64 object-contain rounded border bg-gray-50"
                         style={{ maxWidth: '100%' }}
+                        onError={(e) => {
+                          console.error('🖼️ 背景画像読み込みエラー:', validatedBackgroundAsset.name);
+                          console.error('エラーしたURL:', validatedBackgroundAsset.url);
+                          
+                          // 画像読み込み失敗時の視覚的フィードバック
+                          e.currentTarget.style.display = 'none';
+                          
+                          // エラーメッセージを表示するための要素を作成
+                          const errorDiv = document.createElement('div');
+                          errorDiv.className = 'w-full h-64 flex items-center justify-center bg-red-50 border border-red-200 rounded text-red-600';
+                          errorDiv.innerHTML = '🖼️ 画像の読み込みに失敗しました';
+                          e.currentTarget.parentNode?.appendChild(errorDiv);
+                        }}
                       />
                     </div>
                   </div>
@@ -618,11 +845,11 @@ export const ParagraphEditor: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {selectedParagraph.content.background.name}
+                        {validatedBackgroundAsset.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {selectedParagraph.content.background.metadata.dimensions ? 
-                          `${selectedParagraph.content.background.metadata.dimensions.width}×${selectedParagraph.content.background.metadata.dimensions.height}` : 
+                        {validatedBackgroundAsset.metadata.dimensions ? 
+                          `${validatedBackgroundAsset.metadata.dimensions.width}×${validatedBackgroundAsset.metadata.dimensions.height}` : 
                           'サイズ不明'}
                       </p>
                     </div>
@@ -650,7 +877,7 @@ export const ParagraphEditor: React.FC = () => {
                     >
                       <option value="">画像を選択...</option>
                       {availableBackgrounds.map(asset => (
-                        <option key={asset.id} value={asset.id}>
+                        <option key={`${asset.id}-${asset.name}`} value={asset.id}>
                           {asset.name}
                         </option>
                       ))}
@@ -665,21 +892,21 @@ export const ParagraphEditor: React.FC = () => {
             </div>
           )}
 
-          {selectedParagraph.type !== 'title' && availableBackgrounds.length > 0 && selectedParagraph.content.background && (
+          {selectedParagraph.type !== 'title' && availableBackgrounds.length > 0 && validatedBackgroundAsset && (
             <div className="space-y-2">
               <p className="text-sm text-gray-600">他の背景画像に変更:</p>
               <select
                 onChange={(e) => {
                   const asset = availableBackgrounds.find(a => a.id === e.target.value);
-                  if (asset && asset.id !== selectedParagraph.content.background?.id) {
+                  if (asset && asset.id !== validatedBackgroundAsset?.id) {
                     handleUpdateBackground(asset);
                   }
                 }}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                value={selectedParagraph.content.background.id}
+                value={validatedBackgroundAsset.id}
               >
                 {availableBackgrounds.map(asset => (
-                  <option key={asset.id} value={asset.id}>
+                  <option key={`${asset.id}-${asset.name}`} value={asset.id}>
                     {asset.name}
                   </option>
                 ))}
@@ -692,7 +919,7 @@ export const ParagraphEditor: React.FC = () => {
             <div className="space-y-3">
               <h3 className="text-md font-medium text-gray-800">BGM</h3>
               
-              {selectedParagraph.content.bgm ? (
+              {validatedBgmAsset ? (
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start space-x-4">
                     <div className="w-24 h-16 bg-gray-100 rounded border flex items-center justify-center">
@@ -700,19 +927,22 @@ export const ParagraphEditor: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {selectedParagraph.content.bgm.name}
+                        {validatedBgmAsset.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {selectedParagraph.content.bgm.metadata.duration ? 
-                          `${Math.floor(selectedParagraph.content.bgm.metadata.duration / 60)}:${String(Math.floor(selectedParagraph.content.bgm.metadata.duration % 60)).padStart(2, '0')}` : 
+                        {validatedBgmAsset.metadata.duration ? 
+                          `${Math.floor(validatedBgmAsset.metadata.duration / 60)}:${String(Math.floor(validatedBgmAsset.metadata.duration % 60)).padStart(2, '0')}` : 
                           '長さ不明'}
                       </p>
                       <audio 
                         controls 
                         className="mt-2 w-full h-8"
                         preload="metadata"
+                        onError={(e) => {
+                          console.error('BGM audio failed to load:', validatedBgmAsset.name);
+                        }}
                       >
-                        <source src={selectedParagraph.content.bgm.url} />
+                        <source src={validatedBgmAsset.url} />
                         お使いのブラウザは音声再生に対応していません。
                       </audio>
                     </div>
@@ -740,7 +970,7 @@ export const ParagraphEditor: React.FC = () => {
                     >
                       <option value="">BGMを選択...</option>
                       {availableBgm.map(asset => (
-                        <option key={asset.id} value={asset.id}>
+                        <option key={`${asset.id}-${asset.name}`} value={asset.id}>
                           {asset.name}
                         </option>
                       ))}
@@ -755,21 +985,21 @@ export const ParagraphEditor: React.FC = () => {
             </div>
           )}
 
-          {selectedParagraph.type !== 'title' && availableBgm.length > 0 && selectedParagraph.content.bgm && (
+          {selectedParagraph.type !== 'title' && availableBgm.length > 0 && validatedBgmAsset && (
             <div className="space-y-2">
               <p className="text-sm text-gray-600">他のBGMに変更:</p>
               <select
                 onChange={(e) => {
                   const asset = availableBgm.find(a => a.id === e.target.value);
-                  if (asset && asset.id !== selectedParagraph.content.bgm?.id) {
+                  if (asset && asset.id !== validatedBgmAsset?.id) {
                     handleUpdateBgm(asset);
                   }
                 }}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                value={selectedParagraph.content.bgm.id}
+                value={validatedBgmAsset.id}
               >
                 {availableBgm.map(asset => (
-                  <option key={asset.id} value={asset.id}>
+                  <option key={`${asset.id}-${asset.name}`} value={asset.id}>
                     {asset.name}
                   </option>
                 ))}
@@ -801,21 +1031,25 @@ export const ParagraphEditor: React.FC = () => {
                   タイトル画像
                 </label>
                 
-                {selectedParagraph.content.titleImage ? (
+                {validatedTitleImageAsset ? (
                   <div className="space-y-3">
                     <div className="relative max-w-full">
                       <img
-                        src={selectedParagraph.content.titleImage.url}
-                        alt={selectedParagraph.content.titleImage.name}
+                        src={validatedTitleImageAsset.url}
+                        alt={validatedTitleImageAsset.name}
                         className="w-full h-auto max-h-64 object-contain rounded border bg-gray-50"
                         style={{ maxWidth: '100%' }}
+                        onError={(e) => {
+                          console.error('Title image failed to load:', validatedTitleImageAsset.name);
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {selectedParagraph.content.titleImage.name}
+                          {validatedTitleImageAsset.name}
                         </p>
                       </div>
                       <Button
@@ -836,21 +1070,21 @@ export const ParagraphEditor: React.FC = () => {
               </div>
 
               {/* タイトル画像変更セレクト */}
-              {availableImages.length > 0 && selectedParagraph.content.titleImage && (
+              {availableImages.length > 0 && validatedTitleImageAsset && (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600 dark:text-gray-400">他のタイトル画像に変更:</p>
                   <select
                     onChange={(e) => {
                       const asset = availableImages.find(a => a.id === e.target.value);
-                      if (asset && asset.id !== selectedParagraph.content.titleImage?.id) {
+                      if (asset && asset.id !== validatedTitleImageAsset?.id) {
                         handleUpdateTitleImage(asset);
                       }
                     }}
                     className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    value={selectedParagraph.content.titleImage.id}
+                    value={validatedTitleImageAsset.id}
                   >
                     {availableImages.map(asset => (
-                      <option key={asset.id} value={asset.id}>
+                      <option key={`${asset.id}-${asset.name}`} value={asset.id}>
                         {asset.name}
                       </option>
                     ))}
@@ -914,7 +1148,7 @@ export const ParagraphEditor: React.FC = () => {
                   タイトルBGM
                 </h4>
                 
-                {currentProject?.settings?.titleScreen?.bgm ? (
+                {validatedTitleBgmAsset ? (
                   <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                     <div className="flex items-start space-x-4">
                       <div className="w-16 h-12 bg-gray-100 dark:bg-gray-600 rounded border flex items-center justify-center">
@@ -922,19 +1156,23 @@ export const ParagraphEditor: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {currentProject.settings.titleScreen.bgm.name}
+                          {validatedTitleBgmAsset.name}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {currentProject.settings.titleScreen.bgm.metadata.duration ? 
-                            `${Math.floor(currentProject.settings.titleScreen.bgm.metadata.duration / 60)}:${String(Math.floor(currentProject.settings.titleScreen.bgm.metadata.duration % 60)).padStart(2, '0')}` : 
+                          {validatedTitleBgmAsset.metadata.duration ? 
+                            `${Math.floor(validatedTitleBgmAsset.metadata.duration / 60)}:${String(Math.floor(validatedTitleBgmAsset.metadata.duration % 60)).padStart(2, '0')}` : 
                             '長さ不明'}
                         </p>
                         <audio 
                           controls 
                           className="mt-2 w-full h-8"
                           preload="metadata"
+                          onError={(e) => {
+                            console.error('タイトルBGM再生エラー:', validatedTitleBgmAsset.name);
+                            console.error('URL:', validatedTitleBgmAsset.url);
+                          }}
                         >
-                          <source src={currentProject.settings.titleScreen.bgm.url} />
+                          <source src={validatedTitleBgmAsset.url} />
                           お使いのブラウザは音声再生に対応していません。
                         </audio>
                       </div>
@@ -998,7 +1236,7 @@ export const ParagraphEditor: React.FC = () => {
                       >
                         <option value="">タイトルBGMを選択...</option>
                         {availableBgm.map(asset => (
-                          <option key={asset.id} value={asset.id}>
+                          <option key={`${asset.id}-${asset.name}`} value={asset.id}>
                             {asset.name}
                           </option>
                         ))}
@@ -1012,13 +1250,13 @@ export const ParagraphEditor: React.FC = () => {
                 )}
               </div>
               
-              {availableBgm.length > 0 && currentProject?.settings?.titleScreen?.bgm && (
+              {availableBgm.length > 0 && validatedTitleBgmAsset && (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600 dark:text-gray-400">他のBGMに変更:</p>
                   <select
                     onChange={(e) => {
                       const asset = availableBgm.find(a => a.id === e.target.value);
-                      if (asset && asset.id !== currentProject?.settings?.titleScreen?.bgm?.id && currentProject) {
+                      if (asset && asset.id !== validatedTitleBgmAsset?.id && currentProject) {
                         updateProject({
                           settings: {
                             ...currentProject.settings,
@@ -1038,10 +1276,10 @@ export const ParagraphEditor: React.FC = () => {
                       }
                     }}
                     className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    value={currentProject.settings.titleScreen.bgm.id}
+                    value={validatedTitleBgmAsset.id}
                   >
                     {availableBgm.map(asset => (
-                      <option key={asset.id} value={asset.id}>
+                      <option key={`${asset.id}-${asset.name}`} value={asset.id}>
                         {asset.name}
                       </option>
                     ))}

@@ -229,12 +229,7 @@ export class GameBuilder {
         </div>
         
         <div id="title-screen" style="display: none;">
-            <div class="title-content">
-                <h1 class="game-title">${this.project.title}</h1>
-                <p class="game-description">${this.project.description}</p>
-                <button id="start-button" class="start-btn">ゲーム開始</button>
-                <button id="load-button" class="load-btn" style="display: none;">続きから</button>
-            </div>
+            ${this.generateTitleScreenContent()}
         </div>
         
         <div id="game-screen" style="display: none;">
@@ -722,12 +717,27 @@ class Game {
         document.getElementById('end-screen').style.display = 'none';
         document.getElementById('title-screen').style.display = 'block';
         this.engine.stopAudio();
+        
+        // タイトル画面BGMを再生
+        const titleBgm = document.getElementById('title-bgm');
+        if (titleBgm) {
+            titleBgm.play().catch(error => {
+                console.log('Title BGM autoplay prevented:', error);
+            });
+        }
     }
 
     showGameScreen() {
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('end-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'block';
+        
+        // タイトル画面BGMを停止
+        const titleBgm = document.getElementById('title-bgm');
+        if (titleBgm) {
+            titleBgm.pause();
+            titleBgm.currentTime = 0;
+        }
     }
 
     showEndScreen() {
@@ -994,6 +1004,87 @@ class GameEngine {
   }
 
   /**
+   * タイトル画面のHTMLコンテンツを生成
+   */
+  private generateTitleScreenContent(): string {
+    // タイトルパラグラフを探す
+    const titleParagraph = this.project.paragraphs.find(p => p.type === 'title');
+    
+    let content = '<div class="title-content">';
+    
+    // 背景画像（タイトルパラグラフから）
+    let backgroundStyle = '';
+    if (titleParagraph?.content.background) {
+      const fileName = this.generateAssetFileName(titleParagraph.content.background);
+      backgroundStyle = `background-image: url('./${fileName}'); background-size: contain; background-position: center top; background-repeat: no-repeat;`;
+    }
+    
+    // BGM（タイトルパラグラフから）
+    let bgmElement = '';
+    if (titleParagraph?.content.bgm) {
+      const fileName = this.generateAssetFileName(titleParagraph.content.bgm);
+      bgmElement = `<audio id="title-bgm" src="./${fileName}" loop volume="0.7" style="display: none;"></audio>`;
+    }
+    
+    // タイトル画像（タイトルパラグラフから）
+    let titleImageElement = '';
+    if (titleParagraph?.content.titleImage) {
+      const fileName = this.generateAssetFileName(titleParagraph.content.titleImage);
+      titleImageElement = `<div class="title-image-container"><img src="./${fileName}" alt="Title" class="title-image" /></div>`;
+    }
+    
+    // プロジェクトタイトル（タイトルパラグラフから）
+    let projectTitleElement = '';
+    if (titleParagraph?.content.showProjectTitle ?? true) {
+      const titleColor = titleParagraph?.content.titleColor || '#ffffff';
+      const titleFontSize = titleParagraph?.content.titleFontSize || 48;
+      
+      projectTitleElement = `
+        <div class="project-title-container">
+          <h1 class="project-title" style="
+            color: ${titleColor};
+            font-size: ${titleFontSize}px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 1px 1px 2px rgba(0, 0, 0, 1);
+            line-height: 1.2;
+            margin: 0 0 2rem 0;
+          ">${this.project.title}</h1>
+        </div>
+      `;
+    }
+    
+    // 説明文
+    let descriptionElement = '';
+    if (this.project.description) {
+      descriptionElement = `<p class="game-description" style="order: 2;">${this.project.description}</p>`;
+    }
+    
+    // ボタン
+    const buttonsElement = `
+      <div class="title-buttons" style="order: 4;">
+        <button id="start-button" class="start-btn">ゲーム開始</button>
+        <button id="load-button" class="load-btn" style="display: none;">続きから</button>
+      </div>
+    `;
+    
+    content += bgmElement;
+    content += titleImageElement;
+    content += projectTitleElement;
+    content += descriptionElement;
+    content += buttonsElement;
+    content += '</div>';
+    
+    // 背景画像がある場合、タイトル画面全体にスタイルを適用
+    if (backgroundStyle) {
+      return `<div style="${backgroundStyle} position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"></div>
+              <div style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; height: 100%;">
+                ${content}
+              </div>`;
+    }
+    
+    return content;
+  }
+
+  /**
    * CSSスタイルを生成
    */
   private generateCSS(): string {
@@ -1064,7 +1155,7 @@ body {
 
 .title-content {
     text-align: center;
-    max-width: 600px;
+    max-width: 800px;
     padding: 40px;
     margin: 0 auto;
     display: flex;
@@ -1073,12 +1164,46 @@ body {
     align-items: center;
     width: 100%;
     box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.title-image-container {
+    margin-bottom: 2rem;
+}
+
+.title-image {
+    max-width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.project-title-container {
+    margin: 1rem 0;
+}
+
+.project-title {
+    font-weight: bold;
+    text-align: center;
+    drop-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .game-title {
     font-size: 3rem;
     margin-bottom: 20px;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.title-buttons {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 300px;
 }
 
 .game-description {
