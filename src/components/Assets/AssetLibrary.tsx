@@ -108,18 +108,25 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
     <div className={`space-y-4 ${className}`}>
       {/* ヘッダー・フィルタエリア */}
       <div className="space-y-4">
-        {/* 検索とビューモード */}
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        {/* 検索とビューモード - 4エリア分割 */}
+        <div className="flex items-center gap-2">
+          {/* 1. 虫眼鏡アイコン */}
+          <div className="flex items-center justify-center w-8 h-8">
+            <Search className="w-4 h-4 text-gray-400" />
+          </div>
+          
+          {/* 2. 検索キーワード入力欄 */}
+          <div className="flex-1">
             <Input
               placeholder="アセットを検索..."
               value={filter.searchTerm || ''}
               onChange={(e) => handleFilterChange({ searchTerm: e.target.value })}
-              className="pl-10"
+              className="py-2 min-h-[2rem] w-full"
             />
           </div>
-          <div className="flex gap-2">
+          
+          {/* 3. グリッド表示ボタン */}
+          <div>
             <Button
               variant={viewMode === 'grid' ? 'primary' : 'secondary'}
               size="sm"
@@ -127,6 +134,10 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
             >
               <Grid className="w-4 h-4" />
             </Button>
+          </div>
+          
+          {/* 4. リスト表示ボタン */}
+          <div>
             <Button
               variant={viewMode === 'list' ? 'primary' : 'secondary'}
               size="sm"

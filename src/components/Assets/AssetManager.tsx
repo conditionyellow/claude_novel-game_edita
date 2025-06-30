@@ -67,24 +67,12 @@ export const AssetManager: React.FC<AssetManagerProps> = ({
       {/* ヘッダー */}
       <div className="border-b border-gray-200 p-4">
         <div className="flex items-center justify-between mb-1">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              {mode === 'select' ? 'アセットを選択' : 'アセット管理'}
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              プロジェクトで使用する画像・音声ファイルの管理
-            </p>
-          </div>
-          
-          {mode === 'manage' && (
-            <Button
-              onClick={() => setActiveTab('upload')}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              アセット追加
-            </Button>
-          )}
+          <h2 className="text-xl font-semibold text-gray-900">
+            {mode === 'select' ? 'アセットを選択' : 'アセット管理'}
+          </h2>
+          <p className="text-sm text-gray-600">
+            プロジェクトで使用する画像・音声ファイルの管理
+          </p>
         </div>
 
         {/* 統計情報 - 横一列表示 */}
@@ -132,7 +120,7 @@ export const AssetManager: React.FC<AssetManagerProps> = ({
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              アップロード
+              アセット追加
             </button>
           </div>
         )}
